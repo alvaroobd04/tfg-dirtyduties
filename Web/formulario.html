@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulario de Conocimiento</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600&display=stylesheet">
+    <link rel="stylesheet" href="styleFormulario.css">
+</head>
+<body>
+    <div class="title-container">
+        <h1>Formulario para Conocerte Mejor</h1>
+    </div>
+    <div class="main-container">
+        <form id="formulario" action="principal.html".html" method="GET" class="input-section">
+            <div class="pregunta" id="paso-1">
+                <label for="nombre">Nombre:</label>
+                <input type="text" id="nombre" name="nombre" required>
+                <button type="button" onclick="siguientePaso(2)">Siguiente</button>
+            </div>
+
+            <div class="pregunta" id="paso-2" style="display:none">
+                <label for="edad">Edad:</label>
+                <input type="number" id="edad" name="edad" min="10" required>
+                <button type="button" onclick="siguientePaso(3)">Siguiente</button>
+            </div>
+
+            <div class="pregunta" id="paso-3" style="display:none">
+                <label>¿Eres estudiante?</label>
+                <select name="estudiante" required>
+                    <option value="">Selecciona una opción</option>
+                    <option value="si">Sí</option>
+                    <option value="no">No</option>
+                </select>
+                <button type="button" onclick="siguientePaso(4)">Siguiente</button>
+            </div>
+
+            <div class="pregunta" id="paso-4" style="display:none">
+                <label>¿Trabajas actualmente?</label>
+                <select name="trabaja" required>
+                    <option value="">Selecciona una opción</option>
+                    <option value="si">Sí</option>
+                    <option value="no">No</option>
+                </select>
+                <button type="button" onclick="siguientePaso(5)">Siguiente</button>
+            </div>
+
+            <div class="pregunta" id="paso-5" style="display:none">
+                <label>¿Vives con estudiantes?</label>
+                <select name="vive_con_estudiantes" required>
+                    <option value="">Selecciona una opción</option>
+                    <option value="si">Sí</option>
+                    <option value="no">No</option>
+                </select>
+                <button type="button" onclick="siguientePaso(6)">Siguiente</button>
+            </div>
+
+            <div class="pregunta" id="paso-6" style="display:none">
+                <label>¿Tienes mascotas?</label>
+                <select name="mascotas">
+                    <option value="">Selecciona una opción</option>
+                    <option value="si">Sí</option>
+                    <option value="no">No</option>
+                </select>
+                <button type="button" onclick="siguientePaso(7)">Siguiente</button>
+            </div>
+
+            <div class="pregunta" id="paso-7" style="display:none">
+                <label>¿Qué hobbies tienes?</label>
+                <input type="text" name="hobbies" placeholder="Ej: leer, deporte, música">
+                <button type="button" onclick="siguientePaso(8)">Siguiente</button>
+            </div>
+
+            <div class="pregunta" id="paso-8" style="display:none">
+                <label>¿Algo más que quieras contarnos?</label>
+                <textarea name="comentarios" rows="4" placeholder="Escribe aquí..."></textarea>
+                <button type="button" onclick="document.getElementById('formulario').submit()">Enviar</button>
+            </div>
+            <button type="button" class="skip-btn" onclick="window.location.href='principal.html'">Omitir Formulario</button>
+        </form>
+    </div>
+
+    <footer>
+        <p>© 2025 DirtyDuties - Todos los derechos reservados</p>
+    </footer>
+
+    <script>
+        function siguientePaso(paso) {
+            const pasoAnterior = document.querySelector('.pregunta:not([style*="display: none"])');
+            pasoAnterior.style.display = 'none';
+            const siguiente = document.getElementById(`paso-${paso}`);
+            siguiente.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

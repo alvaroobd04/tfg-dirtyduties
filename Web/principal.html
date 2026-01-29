@@ -1,0 +1,1441 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Panel - DirtyDuties</title>
+  <!-- Importando fuentes de Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="stylce.css">
+</head>
+<body>
+  <button class="sidebar-toggle" aria-label="Alternar barra lateral">☰</button>
+
+  <aside class="sidebar">
+    <h3>Mis Casas</h3>
+    <ul class="house-list" id="house-list">
+      <li class="house-item active" data-house="Casa Salamanca">
+        <span>Casa Salamanca</span>
+        <button onclick="editHouse(this)" aria-label="Editar casa">✏️</button>
+        <button onclick="deleteHouse(this)" aria-label="Eliminar casa">🗑️</button>
+        <button class="share-house-btn" onclick="shareHouse(this)" aria-label="Compartir casa">🔗</button>
+      </li>
+      <li class="house-item" data-house="Casa del Pueblo">
+        <span>Casa del Pueblo</span>
+        <button onclick="editHouse(this)" aria-label="Editar casa">✏️</button>
+        <button onclick="deleteHouse(this)" aria-label="Eliminar casa">🗑️</button>
+        <button class="share-house-btn" onclick="shareHouse(this)" aria-label="Compartir casa">🔗</button>
+      </li>
+    </ul>
+    <button class="add-house-btn" onclick="createHouse()">Añadir Casa</button>
+  </aside>
+
+  <header class="navbar">
+    <div class="navbar-logo">
+      <img src="logo.png" alt="Logo DirtyDuties" />
+      <span class="app-name">DirtyDuties</span>
+      <button class="menu-toggle" aria-label="Alternar menú">☰</button>
+    </div>
+    <nav>
+      <a data-tab="mi-casa" class="active">Mi casa</a>
+      <a data-tab="mis-tareas">Mis tareas</a>
+      <a data-tab="mi-calendario">Mi calendario</a>
+      <a data-tab="mis-notificaciones" id="notification-link">Mis notificaciones<div class="notification-badge" id="notification-badge">0</div></a>
+    </nav>
+    <div class="navbar-right">
+      <div class="user-profile">Tú</div>
+      <a href="login.html" class="btn-salir">Cerrar sesión</a>
+    </div>
+  </header>
+
+  <main>
+    <!-- Sección Mi Casa -->
+    <div id="mi-casa" class="content active">
+      <div class="top-section">
+        <div class="card">
+          <h2>Tareas de Mi Casa</h2>
+          <ul class="task-list" id="task-list"></ul>
+          <div class="add-form" style="display: none;">
+            <input type="text" id="new-house-task" placeholder="Escribe una tarea..." />
+            <select id="task-assignee" class="task-assignee-select">
+              <option value="">Seleccionar persona</option>
+            </select>
+            <button onclick="addHouseTask()">Añadir Tarea</button>
+            <button onclick="saveEditedTask()" id="save-task-btn" style="display: none;">Guardar Cambios</button>
+            <button onclick="cancelEditTask()" id="cancel-task-btn" style="display: none;">Cancelar</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>Personas</h2>
+          <ul class="person-list" id="person-list"></ul>
+          <div class="add-form" style="display: none;">
+            <input type="text" id="new-person" placeholder="Nombre de la persona..." />
+            <button onclick="addPerson()">Añadir Persona</button>
+            <button onclick="saveEditedPerson()" id="save-person-btn" style="display: none;">Guardar Cambios</button>
+            <button onclick="cancelEditPerson()" id="cancel-person-btn" style="display: none;">Cancelar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Resumen de Tareas Completadas</h2>
+        <ul class="leaderboard-list" id="leaderboard-list"></ul>
+      </div>
+
+      <div class="card">
+        <h2>Calendario de la Casa</h2>
+        <div class="calendar-grid" id="house-calendar-grid">
+          <div class="calendar-day"><span>1</span></div>
+          <div class="calendar-day"><span>2</span></div>
+          <div class="calendar-day"><span>3</span></div>
+          <div class="calendar-day"><span>4</span></div>
+          <div class="calendar-day"><span>5</span></div>
+          <div class="calendar-day"><span>6</span></div>
+          <div class="calendar-day"><span>7</span></div>
+          <div class="calendar-day"><span>8</span></div>
+          <div class="calendar-day"><span>9</span></div>
+          <div class="calendar-day"><span>10</span></div>
+          <div class="calendar-day"><span>11</span></div>
+          <div class="calendar-day"><span>12</span></div>
+          <div class="calendar-day"><span>13</span></div>
+          <div class="calendar-day"><span>14</span></div>
+          <div class="calendar-day"><span>15</span></div>
+          <div class="calendar-day"><span>16</span></div>
+          <div class="calendar-day"><span>17</span></div>
+          <div class="calendar-day"><span>18</span></div>
+          <div class="calendar-day"><span>19</span></div>
+          <div class="calendar-day"><span>20</span></div>
+          <div class="calendar-day"><span>21</span></div>
+          <div class="calendar-day"><span>22</span></div>
+          <div class="calendar-day"><span>23</span></div>
+          <div class="calendar-day"><span>24</span></div>
+          <div class="calendar-day"><span>25</span></div>
+          <div class="calendar-day"><span>26</span></div>
+          <div class="calendar-day"><span>27</span></div>
+          <div class="calendar-day"><span>28</span></div>
+          <div class="calendar-day"><span>29</span></div>
+          <div class="calendar-day"><span>30</span></div>
+          <div class="calendar-day"><span>31</span></div>
+          <div class="calendar-day"></div>
+          <div class="calendar-day"></div>
+          <div class="calendar-day"></div>
+          <div class="calendar-day"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sección Mis Tareas -->
+    <div id="mis-tareas" class="content">
+      <div class="card">
+        <h2>Mis Tareas</h2>
+        <ul class="user-task-list" id="user-task-list"></ul>
+        <div class="add-form" style="display: none;">
+          <input type="text" id="new-task" placeholder="Escribe una tarea..." />
+          <button onclick="addTask()">Añadir Tarea</button>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Castigos</h2>
+        <ul class="punishment-list" id="punishment-list"></ul>
+        <button class="clear-all-btn" onclick="clearAllPunishments()">Completar todos los castigos</button>
+      </div>
+    </div>
+
+    <!-- Sección Mi Calendario -->
+    <div id="mi-calendario" class="content">
+      <div class="card">
+        <h2>Mi Calendario</h2>
+        <div class="calendar-grid" id="calendar-grid">
+          <div class="calendar-day"><span>1</span></div>
+          <div class="calendar-day"><span>2</span></div>
+          <div class="calendar-day"><span>3</span></div>
+          <div class="calendar-day"><span>4</span></div>
+          <div class="calendar-day"><span>5</span></div>
+          <div class="calendar-day"><span>6</span></div>
+          <div class="calendar-day"><span>7</span></div>
+          <div class="calendar-day"><span>8</span></div>
+          <div class="calendar-day"><span>9</span></div>
+          <div class="calendar-day"><span>10</span></div>
+          <div class="calendar-day"><span>11</span></div>
+          <div class="calendar-day"><span>12</span></div>
+          <div class="calendar-day"><span>13</span></div>
+          <div class="calendar-day"><span>14</span></div>
+          <div class="calendar-day"><span>15</span></div>
+          <div class="calendar-day"><span>16</span></div>
+          <div class="calendar-day"><span>17</span></div>
+          <div class="calendar-day"><span>18</span></div>
+          <div class="calendar-day"><span>19</span></div>
+          <div class="calendar-day"><span>20</span></div>
+          <div class="calendar-day"><span>21</span></div>
+          <div class="calendar-day"><span>22</span></div>
+          <div class="calendar-day"><span>23</span></div>
+          <div class="calendar-day"><span>24</span></div>
+          <div class="calendar-day"><span>25</span></div>
+          <div class="calendar-day"><span>26</span></div>
+          <div class="calendar-day"><span>27</span></div>
+          <div class="calendar-day"><span>28</span></div>
+          <div class="calendar-day"><span>29</span></div>
+          <div class="calendar-day"><span>30</span></div>
+          <div class="calendar-day"><span>31</span></div>
+          <div class="calendar-day"></div>
+          <div class="calendar-day"></div>
+          <div class="calendar-day"></div>
+          <div class="calendar-day"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sección Mis Notificaciones -->
+    <div id="mis-notificaciones" class="content">
+      <div class="card">
+        <h2>Mis Notificaciones</h2>
+        <ul class="notification-list" id="notification-list"></ul>
+        <button class="clear-all-btn" onclick="clearAllNotifications()">Borrar todo</button>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    © 2025 DirtyDuties - Todos los derechos reservados
+  </footer>
+
+  <div class="copy-feedback" id="copy-feedback">¡Enlace copiado al portapapeles!</div>
+  <div class="review-feedback" id="review-feedback"></div>
+
+  <div class="modal-overlay" id="house-modal-overlay">
+    <div class="house-modal">
+      <h2 id="modal-title">Editar Casa</h2>
+      <div class="modal-content">
+        <div class="modal-section">
+          <label for="modal-house-name">Nombre de la Casa</label>
+          <input type="text" id="modal-house-name" placeholder="Nombre de la casa..." />
+        </div>
+        <div class="modal-section">
+          <h3>Tareas</h3>
+          <ul class="modal-task-list" id="modal-task-list"></ul>
+          <div class="add-form" style="display: none;">
+            <input type="text" id="modal-new-task" placeholder="Escribe una tarea..." />
+            <select id="modal-task-assignee" class="task-assignee-select">
+              <option value="">Seleccionar persona</option>
+            </select>
+            <button onclick="addModalTask()">Añadir Tarea</button>
+            <button onclick="saveModalEditedUserTask()" id="modal-save-task-btn" style="display: none;">Guardar Cambios</button>
+            <button onclick="cancelModalEditTask()" id="modal-cancel-task-btn" style="display: none;">Cancelar</button>
+          </div>
+        </div>
+        <div class="modal-section">
+          <h3>Personas</h3>
+          <ul class="modal-person-list" id="modal-person-list"></ul>
+          <div class="add-form" style="display: none;">
+            <input type="text" id="modal-new-person" placeholder="Nombre de la persona..." />
+            <button onclick="addModalPerson()">Añadir Persona</button>
+            <button onclick="saveModalEditedPerson()" id="modal-save-person-btn" style="display: none;">Guardar Cambios</button>
+            <button onclick="cancelModalEditPerson()" id="modal-cancel-person-btn" style="display: none;">Cancelar</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button class="cancel-btn" onclick="closeHouseModal()">Cancelar</button>
+        <button class="delete-btn" id="modal-delete-btn" onclick="confirmDeleteHouse()" style="display: none;">Eliminar</button>
+        <button class="save-btn" onclick="saveHouse()">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="task-proof-modal-overlay">
+    <div class="task-proof-modal">
+      <h2>Subir Prueba de Tarea Completada</h2>
+      <p id="task-proof-message"></p>
+      <input type="file" id="task-proof-file" accept="image/*,video/*" />
+      <div class="modal-actions">
+        <button class="cancel-btn" onclick="closeTaskProofModal()">Cancelar</button>
+        <button class="save-btn" onclick="submitTaskProof()">Subir Prueba</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="punishment-proof-modal-overlay">
+    <div class="punishment-proof-modal">
+      <h2>Subir Prueba de Castigo Completado</h2>
+      <p id="punishment-proof-message"></p>
+      <input type="file" id="punishment-proof-file" accept="image/*,video/*" />
+      <div class="modal-actions">
+        <button class="cancel-btn" onclick="closePunishmentProofModal()">Cancelar</button>
+        <button class="save-btn" onclick="submitPunishmentProof()">Subir Prueba</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="task-delete-modal-overlay">
+    <div class="task-delete-modal">
+      <h2>Confirmar Completitud de Tarea</h2>
+      <p id="task-delete-message"></p>
+      <div class="modal-actions">
+        <button class="no-btn" onclick="closeTaskDeleteModal()">No</button>
+        <button class="yes-btn" onclick="confirmTaskDelete()">Sí</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // Datos iniciales
+  const housesData = {
+    "Casa Salamanca": {
+      people: ["Tú", "Lucía"],
+      tasks: [
+        { text: "Limpiar cocina", assignee: "Tú", completed: false, deadline: "2025-05-07", flagged: false },
+        { text: "Sacar la basura", assignee: "Lucía", completed: false, deadline: "2025-05-07", flagged: false },
+        { text: "Aspirar el salón", assignee: "Tú", completed: false, deadline: "2025-05-07", flagged: false },
+        { text: "Lavar los platos", assignee: "Lucía", completed: false, deadline: "2025-05-07", flagged: false },
+        { text: "Regar las plantas", assignee: "Tú", completed: false, deadline: "2025-05-07", flagged: false },
+        { text: "Limpiar el baño", assignee: "Lucía", completed: false, deadline: "2025-05-07", flagged: false }
+      ],
+      userTasks: [],
+      punishments: [
+        {
+          user: "Tú",
+          taskText: "Fregar el suelo",
+          reason: "No haber limpiado la casa a tiempo",
+          completed: false,
+          originalTask: "Limpiar cocina",
+          originalDeadline: "2025-05-07",
+          assignedDate: "2025-05-08"
+        },
+        {
+          user: "Tú",
+          taskText: "Limpiar ventanas",
+          reason: "No haber sacado la basura a tiempo",
+          completed: false,
+          originalTask: "Sacar la basura",
+          originalDeadline: "2025-05-06",
+          assignedDate: "2025-05-07"
+        },
+        {
+          user: "Tú",
+          taskText: "Ordenar el garaje",
+          reason: "No haber aspirado el salón a tiempo",
+          completed: false,
+          originalTask: "Aspirar el salón",
+          originalDeadline: "2025-05-07",
+          assignedDate: "2025-05-08"
+        },
+        {
+          user: "Tú",
+          taskText: "Lavar ropa",
+          reason: "No haber regado las plantas a tiempo",
+          completed: true,
+          originalTask: "Regar las plantas",
+          originalDeadline: "2025-05-05",
+          assignedDate: "2025-05-06"
+        }
+      ]
+    },
+    "Casa del Pueblo": {
+      people: ["Tú", "Pedro", "María"],
+      tasks: [
+        { text: "Barrer el patio", assignee: "Tú", completed: false, deadline: "2025-05-07", flagged: false },
+        { text: "Limpiar ventanas", assignee: "Pedro", completed: false, deadline: "2025-05-07", flagged: false },
+        { text: "Cortar el césped", assignee: "María", completed: false, deadline: "2025-05-07", flagged: false },
+        { text: "Lavar ropa", assignee: "Tú", completed: false, deadline: "2025-05-07", flagged: false },
+        { text: "Ordenar el garaje", assignee: "Pedro", completed: false, deadline: "2025-05-07", flagged: false },
+        { text: "Limpiar la cocina", assignee: "María", completed: false, deadline: "2025-05-07", flagged: false }
+      ],
+      userTasks: [],
+      punishments: []
+    }
+  };
+
+  // Imprimir castigos en la consola para depuración
+  console.log("Castigos de Casa Salamanca:", housesData["Casa Salamanca"].punishments);
+
+  let currentHouse = "Casa Salamanca";
+  let notificationCount = 0;
+  let modalMode = 'create';
+  let editingHouseName = '';
+  let taskToDelete = null;
+  let punishmentToComplete = null;
+  let editingTask = null;
+  let editingPerson = null;
+  let modalEditingTask = null;
+  let modalEditingPerson = null;
+  let modalTasks = [];
+  let modalPeople = [];
+
+  function saveToLocalStorage() {
+    localStorage.setItem('housesData', JSON.stringify(housesData));
+  }
+
+  function updateNotificationCount(change) {
+    notificationCount += change;
+    const badge = document.getElementById('notification-badge');
+    if (notificationCount > 0) {
+      badge.textContent = notificationCount;
+      badge.style.display = 'flex';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+
+  function checkUncompletedTasks(houseName) {
+    const houseData = housesData[houseName];
+    const currentDate = new Date().toISOString().split('T')[0];
+
+    houseData.tasks.forEach(task => {
+      if (!task.completed && task.deadline <= currentDate && !task.flagged) {
+        houseData.punishments = houseData.punishments || [];
+        houseData.punishments.push({
+          user: task.assignee,
+          taskText: `Completar ${task.text}`,
+          reason: `No haber completado "${task.text}" a tiempo`,
+          completed: false,
+          originalTask: task.text,
+          originalDeadline: task.deadline,
+          assignedDate: currentDate
+        });
+        task.flagged = true;
+
+        const notificationList = document.getElementById('notification-list');
+        const notificationItem = document.createElement('li');
+        notificationItem.classList.add('notification-item');
+        notificationItem.innerHTML = `
+          <span>Castigo asignado: ${task.text} por no haberlo completado a tiempo</span>
+          <button onclick="markPunishmentAsRead(this, '${task.text}')">Marcar como leída</button>
+        `;
+        notificationList.appendChild(notificationItem);
+        updateNotificationCount(1);
+      }
+    });
+    saveToLocalStorage();
+  }
+
+  function updateAssigneeSelect() {
+    const select = document.getElementById('task-assignee');
+    select.innerHTML = '<option value="">Seleccionar persona</option>';
+    housesData[currentHouse].people.forEach(person => {
+      const option = document.createElement('option');
+      option.value = person;
+      option.textContent = person;
+      select.appendChild(option);
+    });
+  }
+
+  function updateModalAssigneeSelect() {
+    const select = document.getElementById('modal-task-assignee');
+    select.innerHTML = '<option value="">Seleccionar persona</option>';
+    modalPeople.forEach(person => {
+      const option = document.createElement('option');
+      option.value = person;
+      option.textContent = person;
+      select.appendChild(option);
+    });
+  }
+
+  function loadHouseData(houseName) {
+    currentHouse = houseName;
+    checkUncompletedTasks(houseName);
+    const houseData = housesData[houseName];
+
+    const taskList = document.getElementById('task-list');
+    taskList.innerHTML = '';
+    houseData.tasks.forEach(task => {
+      const taskItem = document.createElement('li');
+      taskItem.classList.add('task-item');
+      if (task.completed) {
+        taskItem.classList.add('completed');
+      }
+      taskItem.innerHTML = `
+        <span>${task.text}</span>
+        <span class="assignee">${task.assignee}</span>
+        
+      `;
+      taskList.appendChild(taskItem);
+    });
+
+    const personList = document.getElementById('person-list');
+    personList.innerHTML = '';
+    houseData.people.forEach(person => {
+      const personItem = document.createElement('li');
+      personItem.classList.add('person-item');
+      personItem.innerHTML = `
+        <span>${person}</span>
+        
+      `;
+      personList.appendChild(personItem);
+    });
+
+    updateAssigneeSelect();
+
+    const leaderboardList = document.getElementById('leaderboard-list');
+    leaderboardList.innerHTML = '';
+    houseData.people.forEach(person => {
+      const completedTasks = houseData.tasks.filter(t => t.assignee === person && t.completed).length;
+      const leaderboardItem = document.createElement('li');
+      leaderboardItem.classList.add('leaderboard-item');
+      leaderboardItem.innerHTML = `<span>${person}: ${completedTasks} tareas completadas</span>`;
+      leaderboardList.appendChild(leaderboardItem);
+    });
+
+    const userTaskList = document.getElementById('user-task-list');
+    userTaskList.innerHTML = '';
+    const notificationList = document.getElementById('notification-list');
+    notificationList.innerHTML = '';
+    notificationCount = 0;
+
+    houseData.tasks.forEach(task => {
+      if (task.assignee === 'Tú' && !task.completed) {
+        const userTaskItem = document.createElement('li');
+        userTaskItem.classList.add('user-task-item');
+        userTaskItem.dataset.type = 'house';
+        userTaskItem.dataset.text = task.text;
+        userTaskItem.innerHTML = `
+          <input type="checkbox" class="task-checkbox">
+          <span>${task.text}</span>
+        `;
+        userTaskList.appendChild(userTaskItem);
+
+        const notificationItem = document.createElement('li');
+        notificationItem.classList.add('notification-item');
+        notificationItem.innerHTML = `
+          <span>Tarea pendiente: ${task.text}</span>
+          <button onclick="markNotificationAsRead(this, 'task', '${task.text}')">Marcar como leída</button>
+        `;
+        notificationList.appendChild(notificationItem);
+        notificationCount++;
+      }
+    });
+
+    houseData.userTasks.forEach(task => {
+      if (task.assignee === 'Tú' && !task.completed) {
+        const userTaskItem = document.createElement('li');
+        userTaskItem.classList.add('user-task-item');
+        userTaskItem.dataset.type = 'user';
+        userTaskItem.dataset.text = task.text;
+        userTaskItem.innerHTML = `
+          <input type="checkbox" class="task-checkbox">
+          <span>${task.text}</span>
+        `;
+        userTaskList.appendChild(userTaskItem);
+
+        const notificationItem = document.createElement('li');
+        notificationItem.classList.add('notification-item');
+        notificationItem.innerHTML = `
+          <span>Tarea pendiente: ${task.text}</span>
+          <button onclick="markNotificationAsRead(this, 'task', '${task.text}')">Marcar como leída</button>
+        `;
+        notificationList.appendChild(notificationItem);
+        notificationCount++;
+      }
+    });
+
+    const punishmentList = document.getElementById('punishment-list');
+    punishmentList.innerHTML = '';
+    houseData.punishments = houseData.punishments || [];
+    houseData.punishments.forEach(punishment => {
+      if (punishment.user === 'Tú') {
+        const punishmentItem = document.createElement('li');
+        punishmentItem.classList.add('punishment-item');
+        if (punishment.completed) {
+          punishmentItem.classList.add('completed');
+        }
+        punishmentItem.dataset.taskText = punishment.taskText;
+        punishmentItem.innerHTML = `
+          <input type="checkbox" class="punishment-checkbox" ${punishment.completed ? 'checked' : ''}>
+          <span>${punishment.taskText} (Motivo: ${punishment.reason})</span>
+          <button class="toggle-details-btn" onclick="togglePunishmentDetails(this)">🔽</button>
+          <div class="punishment-details">
+            <p>Tarea original: ${punishment.originalTask}</p>
+            <p>Fecha límite original: ${punishment.originalDeadline}</p>
+            <p>Asignado el: ${punishment.assignedDate}</p>
+          </div>
+        `;
+        punishmentList.appendChild(punishmentItem);
+
+        const notificationItem = document.createElement('li');
+        notificationItem.classList.add('notification-item');
+        notificationItem.innerHTML = `
+          <span>Castigo: ${punishment.taskText} por ${punishment.reason}</span>
+          <button onclick="markPunishmentAsRead(this, '${punishment.taskText}')">Marcar como leída</button>
+        `;
+        notificationList.appendChild(notificationItem);
+        notificationCount++;
+      }
+    });
+
+    updateNotificationCount(0);
+
+    const houseCalendarDays = document.querySelectorAll('#house-calendar-grid .calendar-day');
+    houseCalendarDays.forEach(day => {
+      const span = day.querySelector('span');
+      day.innerHTML = '';
+      if (span) day.appendChild(span);
+    });
+    houseData.tasks.forEach((task, index) => {
+      if (!task.completed) {
+        const dayIndex = (index % 31) + 1;
+        const calendarDay = houseCalendarDays[dayIndex - 1];
+        const taskDiv = document.createElement('div');
+        taskDiv.classList.add('task');
+        taskDiv.textContent = `${task.text} - ${task.assignee}`;
+        calendarDay.appendChild(taskDiv);
+      }
+    });
+
+    const userCalendarDays = document.querySelectorAll('#calendar-grid .calendar-day');
+    userCalendarDays.forEach(day => {
+      const span = day.querySelector('span');
+      day.innerHTML = '';
+      if (span) day.appendChild(span);
+    });
+    houseData.tasks.forEach((task, index) => {
+      if (task.assignee === 'Tú' && !task.completed) {
+        const dayIndex = (index % 31) + 1;
+        const calendarDay = userCalendarDays[dayIndex - 1];
+        const taskDiv = document.createElement('div');
+        taskDiv.classList.add('task');
+        taskDiv.textContent = `${task.text}`;
+        calendarDay.appendChild(taskDiv);
+      }
+    });
+    houseData.userTasks.forEach((task, index) => {
+      if (task.assignee === 'Tú' && !task.completed) {
+        const dayIndex = ((index + houseData.tasks.length) % 31) + 1;
+        const calendarDay = userCalendarDays[dayIndex - 1];
+        const taskDiv = document.createElement('div');
+        taskDiv.classList.add('task');
+        taskDiv.textContent = `${task.text}`;
+        calendarDay.appendChild(taskDiv);
+      }
+    });
+    houseData.punishments.forEach((punishment, index) => {
+      if (punishment.user === 'Tú' && !punishment.completed) {
+        const dayIndex = ((index + houseData.tasks.length + houseData.userTasks.length) % 31) + 1;
+        const calendarDay = userCalendarDays[dayIndex - 1];
+        const punishmentDiv = document.createElement('div');
+        punishmentDiv.classList.add('punishment');
+        punishmentDiv.textContent = `Castigo: ${punishment.taskText}`;
+        calendarDay.appendChild(punishmentDiv);
+      }
+    });
+
+    setupTaskCheckboxes();
+    setupPunishmentCheckboxes();
+  }
+
+  document.querySelector('.sidebar-toggle').addEventListener('click', () => {
+    document.querySelector('.sidebar').classList.toggle('active');
+  });
+
+  document.querySelector('.menu-toggle').addEventListener('click', () => {
+    document.querySelector('.navbar nav').classList.toggle('active');
+  });
+
+  const tabs = document.querySelectorAll('.navbar nav a');
+  const contents = document.querySelectorAll('.content');
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+
+      contents.forEach(content => content.classList.remove('active'));
+      document.getElementById(tab.getAttribute('data-tab')).classList.add('active');
+    });
+  });
+
+  // Cerrar modales con la tecla ESC
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeHouseModal();
+      closeTaskProofModal();
+      closePunishmentProofModal();
+      closeTaskDeleteModal();
+      cancelEditTask();
+      cancelEditPerson();
+      cancelModalEditTask();
+      cancelModalEditPerson();
+    }
+  });
+
+  function setupTaskCheckboxes() {
+    document.querySelectorAll('.user-task-item .task-checkbox').forEach(checkbox => {
+      checkbox.addEventListener('change', () => {
+        const taskItem = checkbox.closest('.user-task-item');
+        const taskText = taskItem.dataset.text;
+        const taskType = taskItem.dataset.type;
+
+        if (checkbox.checked) {
+          taskToDelete = { text: taskText, type: taskType };
+          document.getElementById('task-proof-message').textContent = `Por favor, sube una prueba de que la tarea "${taskText}" ha sido completada.`;
+          document.getElementById('task-proof-modal-overlay').classList.add('active');
+          checkbox.checked = false;
+        }
+      });
+    });
+  }
+
+  function setupPunishmentCheckboxes() {
+    document.querySelectorAll('.punishment-item .punishment-checkbox').forEach(checkbox => {
+      checkbox.addEventListener('change', () => {
+        const punishmentItem = checkbox.closest('.punishment-item');
+        const taskText = punishmentItem.dataset.taskText;
+        if (checkbox.checked) {
+          punishmentToComplete = taskText;
+          document.getElementById('punishment-proof-message').textContent = `Por favor, sube una prueba de que el castigo "${taskText}" ha sido completado.`;
+          document.getElementById('punishment-proof-modal-overlay').classList.add('active');
+          checkbox.checked = false;
+        } else {
+          punishmentItem.classList.remove('completed');
+          housesData[currentHouse].punishments = housesData[currentHouse].punishments.map(p => {
+            if (p.taskText === taskText && p.user === 'Tú') {
+              return { ...p, completed: false };
+            }
+            return p;
+          });
+          saveToLocalStorage();
+          loadHouseData(currentHouse);
+        }
+      });
+    });
+  }
+
+  function togglePunishmentDetails(button) {
+    const details = button.nextElementSibling;
+    details.classList.toggle('active');
+    button.textContent = details.classList.contains('active') ? '🔼' : '🔽';
+  }
+
+  function addHouseTask() {
+    const taskInput = document.getElementById('new-house-task');
+    const assigneeSelect = document.getElementById('task-assignee');
+    const taskText = taskInput.value.trim();
+    const assignee = assigneeSelect.value;
+
+    if (taskText === '' || assignee === '') {
+      alert('Por favor, completa la tarea y selecciona una persona.');
+      return;
+    }
+
+    const deadline = new Date();
+    deadline.setDate(deadline.getDate() + 7);
+    const newTask = {
+      text: taskText,
+      assignee: assignee,
+      completed: false,
+      deadline: deadline.toISOString().split('T')[0],
+      flagged: false
+    };
+    housesData[currentHouse].tasks.push(newTask);
+
+    const notificationList = document.getElementById('notification-list');
+    const notificationItem = document.createElement('li');
+    notificationItem.classList.add('notification-item');
+    notificationItem.innerHTML = `
+      <span>Tarea pendiente: ${taskText}</span>
+      <button onclick="markNotificationAsRead(this, 'task', '${taskText}')">Marcar como leída</button>
+    `;
+    notificationList.appendChild(notificationItem);
+    updateNotificationCount(1);
+
+    saveToLocalStorage();
+    loadHouseData(currentHouse);
+    taskInput.value = '';
+    assigneeSelect.value = '';
+  }
+
+  function editTask(taskText, assignee) {
+    editingTask = { text: taskText, assignee };
+    const taskInput = document.getElementById('new-house-task');
+    const assigneeSelect = document.getElementById('task-assignee');
+    taskInput.value = taskText;
+    assigneeSelect.value = assignee;
+    document.getElementById('save-task-btn').style.display = 'inline-block';
+    document.getElementById('cancel-task-btn').style.display = 'inline-block';
+    document.querySelector('.add-form button[onclick="addHouseTask()"]').style.display = 'none';
+    taskInput.focus();
+  }
+
+  function saveEditedTask() {
+    const taskInput = document.getElementById('new-house-task');
+    const assigneeSelect = document.getElementById('task-assignee');
+    const newText = taskInput.value.trim();
+    const newAssignee = assigneeSelect.value;
+
+    if (newText === '' || newAssignee === '') {
+      alert('Por favor, completa la tarea y selecciona una persona.');
+      return;
+    }
+
+    housesData[currentHouse].tasks = housesData[currentHouse].tasks.map(task => {
+      if (task.text === editingTask.text && task.assignee === editingTask.assignee) {
+        return { ...task, text: newText, assignee: newAssignee };
+      }
+      return task;
+    });
+
+    saveToLocalStorage();
+    loadHouseData(currentHouse);
+    cancelEditTask();
+  }
+
+  function cancelEditTask() {
+    editingTask = null;
+    const taskInput = document.getElementById('new-house-task');
+    const assigneeSelect = document.getElementById('task-assignee');
+    taskInput.value = '';
+    assigneeSelect.value = '';
+    document.getElementById('save-task-btn').style.display = 'none';
+    document.getElementById('cancel-task-btn').style.display = 'none';
+    document.querySelector('.add-form button[onclick="addHouseTask()"]').style.display = 'inline-block';
+  }
+
+  function deleteTask(taskText) {
+    housesData[currentHouse].tasks = housesData[currentHouse].tasks.filter(task => task.text !== taskText);
+    saveToLocalStorage();
+    loadHouseData(currentHouse);
+  }
+
+  function addPerson() {
+    const personInput = document.getElementById('new-person');
+    const personName = personInput.value.trim();
+    if (personName === '') {
+      alert('El nombre de la persona no puede estar vacío.');
+      return;
+    }
+
+    if (housesData[currentHouse].people.includes(personName)) {
+      alert('Ya existe una persona con ese nombre.');
+      return;
+    }
+
+    housesData[currentHouse].people.push(personName);
+    saveToLocalStorage();
+    loadHouseData(currentHouse);
+    personInput.value = '';
+  }
+
+  function editPerson(personName) {
+    editingPerson = personName;
+    const personInput = document.getElementById('new-person');
+    personInput.value = personName;
+    document.getElementById('save-person-btn').style.display = 'inline-block';
+    document.getElementById('cancel-person-btn').style.display = 'inline-block';
+    document.querySelector('.add-form button[onclick="addPerson()"]').style.display = 'none';
+    personInput.focus();
+  }
+
+  function saveEditedPerson() {
+    const personInput = document.getElementById('new-person');
+    const newName = personInput.value.trim();
+
+    if (newName === '') {
+      alert('El nombre de la persona no puede estar vacío.');
+      return;
+    }
+
+    if (newName !== editingPerson && housesData[currentHouse].people.includes(newName)) {
+      alert('Ya existe una persona con ese nombre.');
+      return;
+    }
+
+    housesData[currentHouse].people = housesData[currentHouse].people.map(person => {
+      if (person === editingPerson) {
+        return newName;
+      }
+      return person;
+    });
+
+    housesData[currentHouse].tasks = housesData[currentHouse].tasks.map(task => {
+      if (task.assignee === editingPerson) {
+        return { ...task, assignee: newName };
+      }
+      return task;
+    });
+
+    housesData[currentHouse].punishments = housesData[currentHouse].punishments.map(punishment => {
+      if (punishment.user === editingPerson) {
+        return { ...punishment, user: newName };
+      }
+      return punishment;
+    });
+
+    saveToLocalStorage();
+    loadHouseData(currentHouse);
+    cancelEditPerson();
+  }
+
+  function cancelEditPerson() {
+    editingPerson = null;
+    const personInput = document.getElementById('new-person');
+    personInput.value = '';
+    document.getElementById('save-person-btn').style.display = 'none';
+    document.getElementById('cancel-person-btn').style.display = 'none';
+    document.querySelector('.add-form button[onclick="addPerson()"]').style.display = 'inline-block';
+  }
+
+  function deletePerson(personName) {
+    housesData[currentHouse].people = housesData[currentHouse].people.filter(person => person !== personName);
+    housesData[currentHouse].tasks = housesData[currentHouse].tasks.filter(task => task.assignee !== personName);
+    housesData[currentHouse].punishments = housesData[currentHouse].punishments.filter(punishment => punishment.user !== personName);
+    saveToLocalStorage();
+    loadHouseData(currentHouse);
+  }
+
+  function addTask() {
+    const taskInput = document.getElementById('new-task');
+    const taskText = taskInput.value.trim();
+    if (taskText === '') {
+      alert('La tarea no puede estar vacía.');
+      return;
+    }
+
+    const newTask = { text: taskText, assignee: 'Tú', completed: false };
+    housesData[currentHouse].userTasks.push(newTask);
+
+    const notificationList = document.getElementById('notification-list');
+    const notificationItem = document.createElement('li');
+    notificationItem.classList.add('notification-item');
+    notificationItem.innerHTML = `
+      <span>Tarea pendiente: ${taskText}</span>
+      <button onclick="markNotificationAsRead(this, 'task', '${taskText}')">Marcar como leída</button>
+    `;
+    notificationList.appendChild(notificationItem);
+    updateNotificationCount(1);
+
+    saveToLocalStorage();
+    loadHouseData(currentHouse);
+    taskInput.value = '';
+  }
+
+  function addModalTask() {
+    const taskInput = document.getElementById('modal-new-task');
+    const assigneeSelect = document.getElementById('modal-task-assignee');
+    const taskText = taskInput.value.trim();
+    const assignee = assigneeSelect.value;
+
+    if (taskText === '' || assignee === '') {
+      alert('Por favor, completa la tarea y selecciona una persona.');
+      return;
+    }
+
+    const deadline = new Date();
+    deadline.setDate(deadline.getDate() + 7);
+    const newTask = {
+      text: taskText,
+      assignee: assignee,
+      completed: false,
+      deadline: deadline.toISOString().split('T')[0],
+      flagged: false
+    };
+    modalTasks.push(newTask);
+    loadModalData();
+    taskInput.value = '';
+    assigneeSelect.value = '';
+  }
+
+  function editModalTask(taskText, assignee) {
+    modalEditingTask = { text: taskText, assignee };
+    const taskInput = document.getElementById('modal-new-task');
+    const assigneeSelect = document.getElementById('modal-task-assignee');
+    taskInput.value = taskText;
+    assigneeSelect.value = assignee;
+    document.getElementById('modal-save-task-btn').style.display = 'inline-block';
+    document.getElementById('modal-cancel-task-btn').style.display = 'inline-block';
+    document.querySelector('.modal-section .add-form button[onclick="addModalTask()"]').style.display = 'none';
+    taskInput.focus();
+  }
+
+  function saveModalEditedTask() {
+    const taskInput = document.getElementById('modal-new-task');
+    const assigneeSelect = document.getElementById('modal-task-assignee');
+    const newText = taskInput.value.trim();
+    const newAssignee = assigneeSelect.value;
+
+    if (newText === '' || newAssignee === '') {
+      alert('Por favor, completa la tarea y selecciona una persona.');
+      return;
+    }
+
+    modalTasks = modalTasks.map(task => {
+      if (task.text === modalEditingTask.text && task.assignee === modalEditingTask.assignee) {
+        return { ...task, text: newText, assignee: newAssignee };
+      }
+      return task;
+    });
+
+    loadModalData();
+    cancelModalEditTask();
+  }
+
+  
+let modalEditingUserTask = null;
+
+function editModalUserTask(taskText) {
+  modalEditingUserTask = taskText;
+  document.getElementById('modal-new-task').value = taskText;
+  document.getElementById('modal-save-task-btn').style.display = 'inline-block';
+  document.getElementById('modal-cancel-task-btn').style.display = 'inline-block';
+  document.querySelector('.modal-section .add-form button[onclick="addModalTask()"]')?.style?.setProperty('display', 'none');
+}
+
+function saveModalEditedUserTask() {
+  const taskInput = document.getElementById('modal-new-task');
+  const assigneeSelect = document.getElementById('modal-task-assignee');
+  const newText = taskInput.value.trim();
+  const newAssignee = assigneeSelect.value;
+
+  if (!newText || !newAssignee) {
+    alert('Por favor, completa la tarea y selecciona una persona.');
+    return;
+  }
+
+  modalTasks = modalTasks.map(t =>
+    t.text === modalEditingUserTask ? { ...t, text: newText, assignee: newAssignee } : t
+  );
+  loadModalData();
+  cancelModalEditTask();
+}
+
+function cancelModalEditTask() {
+    modalEditingTask = null;
+    const taskInput = document.getElementById('modal-new-task');
+    const assigneeSelect = document.getElementById('modal-task-assignee');
+    taskInput.value = '';
+    assigneeSelect.value = '';
+    document.getElementById('modal-save-task-btn').style.display = 'none';
+    document.getElementById('modal-cancel-task-btn').style.display = 'none';
+    document.querySelector('.modal-section .add-form button[onclick="addModalTask()"]').style.display = 'inline-block';
+  }
+
+  function deleteModalTask(taskText) {
+    modalTasks = modalTasks.filter(task => task.text !== taskText);
+    loadModalData();
+  }
+
+  function addModalPerson() {
+    const personInput = document.getElementById('modal-new-person');
+    const personName = personInput.value.trim();
+    if (personName === '') {
+      alert('El nombre de la persona no puede estar vacío.');
+      return;
+    }
+
+    if (modalPeople.includes(personName)) {
+      alert('Ya existe una persona con ese nombre.');
+      return;
+    }
+
+    modalPeople.push(personName);
+    loadModalData();
+    personInput.value = '';
+  }
+
+  function editModalPerson(personName) {
+    modalEditingPerson = personName;
+    const personInput = document.getElementById('modal-new-person');
+    personInput.value = personName;
+    document.getElementById('modal-save-person-btn').style.display = 'inline-block';
+    document.getElementById('modal-cancel-person-btn').style.display = 'inline-block';
+    document.querySelector('.modal-section .add-form button[onclick="addModalPerson()"]').style.display = 'none';
+    personInput.focus();
+  }
+
+  function saveModalEditedPerson() {
+    const personInput = document.getElementById('modal-new-person');
+    const newName = personInput.value.trim();
+
+    if (newName === '') {
+      alert('El nombre de la persona no puede estar vacío.');
+      return;
+    }
+
+    if (newName !== modalEditingPerson && modalPeople.includes(newName)) {
+      alert('Ya existe una persona con ese nombre.');
+      return;
+    }
+
+    modalPeople = modalPeople.map(person => person === modalEditingPerson ? newName : person);
+    modalTasks = modalTasks.map(task => {
+      if (task.assignee === modalEditingPerson) {
+        return { ...task, assignee: newName };
+      }
+      return task;
+    });
+
+    loadModalData();
+    cancelModalEditPerson();
+  }
+
+  function cancelModalEditPerson() {
+    modalEditingPerson = null;
+    const personInput = document.getElementById('modal-new-person');
+    personInput.value = '';
+    document.getElementById('modal-save-person-btn').style.display = 'none';
+    document.getElementById('modal-cancel-person-btn').style.display = 'none';
+    document.querySelector('.modal-section .add-form button[onclick="addModalPerson()"]').style.display = 'inline-block';
+  }
+
+  function deleteModalPerson(personName) {
+    modalPeople = modalPeople.filter(person => person !== personName);
+    modalTasks = modalTasks.filter(task => task.assignee !== personName);
+    loadModalData();
+  }
+
+  function loadModalData() {
+    const taskList = document.getElementById('modal-task-list');
+    taskList.innerHTML = '';
+    modalTasks.forEach(task => {
+      const taskItem = document.createElement('li');
+      taskItem.classList.add('task-item');
+      taskItem.innerHTML = `
+        <span>${task.text}</span>
+        <span class="assignee">${task.assignee}</span>
+        <button onclick="editModalTask('${task.text}', '${task.assignee}')" aria-label="Editar tarea">✏️</button>
+        <button onclick="deleteModalTask('${task.text}')" aria-label="Eliminar tarea">🗑️</button>
+      `;
+      taskList.appendChild(taskItem);
+    });
+
+    const personList = document.getElementById('modal-person-list');
+    personList.innerHTML = '';
+    modalPeople.forEach(person => {
+      const personItem = document.createElement('li');
+      personItem.classList.add('person-item');
+      personItem.innerHTML = `
+        <span>${person}</span>
+        <button onclick="editModalPerson('${person}')" aria-label="Editar persona">✏️</button>
+        <button onclick="deleteModalPerson('${person}')" aria-label="Eliminar persona">🗑️</button>
+      `;
+      personList.appendChild(personItem);
+    });
+
+    updateModalAssigneeSelect();
+  }
+
+  function setupHouseSelection() {
+    document.querySelectorAll('.house-item').forEach(item => {
+      item.addEventListener('click', (e) => {
+        if (e.target.tagName !== 'BUTTON') {
+          document.querySelectorAll('.house-item').forEach(i => i.classList.remove('active'));
+          item.classList.add('active');
+          const houseName = item.getAttribute('data-house');
+          loadHouseData(houseName);
+        }
+      });
+    });
+  }
+
+  function createHouse() {
+  modalMode = 'create';
+  editingHouseName = '';
+  modalPeople = ['Tú'];
+  modalTasks = [
+    { text: "Limpiar cocina", assignee: "Tú", completed: false, deadline: '', flagged: false },
+    { text: "Sacar la basura", assignee: "Tú", completed: false, deadline: '', flagged: false },
+    { text: "Lavar los platos", assignee: "Tú", completed: false, deadline: '', flagged: false }
+  ];
+  alert("Se han precargado tareas típicas para ayudarte. Puedes editarlas o eliminarlas si lo deseas.");
+
+  // Mostrar formularios para tareas y personas (como en editar casa)
+  document.querySelector('#modal-task-list + .add-form').style.display = 'flex';
+  document.querySelector('#modal-person-list + .add-form').style.display = 'flex';
+
+  document.getElementById('modal-title').textContent = 'Crear Casa';
+  document.getElementById('modal-house-name').value = '';
+  document.getElementById('modal-delete-btn').style.display = 'none';
+  loadModalData();
+  document.getElementById('house-modal-overlay').classList.add('active');
+  document.getElementById('modal-house-name').focus();
+}
+
+  function editHouse(button) {
+  document.querySelector('#modal-task-list + .add-form').style.display = 'flex';
+  document.querySelector('#modal-person-list + .add-form').style.display = 'flex';
+
+    modalMode = 'edit';
+    const houseItem = button.closest('.house-item');
+    editingHouseName = houseItem.getAttribute('data-house');
+    modalTasks = JSON.parse(JSON.stringify(housesData[editingHouseName].tasks));
+    modalPeople = [...housesData[editingHouseName].people];
+    document.getElementById('modal-title').textContent = 'Editar Casa';
+    document.getElementById('modal-house-name').value = editingHouseName;
+    document.getElementById('modal-delete-btn').style.display = 'inline-block';
+    loadModalData();
+    document.getElementById('house-modal-overlay').classList.add('active');
+    document.getElementById('modal-house-name').focus();
+  }
+
+  function deleteHouse(button) {
+    modalMode = 'delete';
+    const houseItem = button.closest('.house-item');
+    editingHouseName = houseItem.getAttribute('data-house');
+    modalTasks = JSON.parse(JSON.stringify(housesData[editingHouseName].tasks));
+    modalPeople = [...housesData[editingHouseName].people];
+    document.getElementById('modal-title').textContent = 'Eliminar Casa';
+    document.getElementById('modal-house-name').value = editingHouseName;
+    document.getElementById('modal-delete-btn').style.display = 'inline-block';
+    loadModalData();
+    document.getElementById('house-modal-overlay').classList.add('active');
+  }
+
+  function closeHouseModal() {
+    document.getElementById('house-modal-overlay').classList.remove('active');
+    modalTasks = [];
+    modalPeople = [];
+    modalEditingTask = null;
+    modalEditingPerson = null;
+  }
+
+  function confirmDeleteHouse() {
+    if (modalMode === 'delete' || modalMode === 'edit') {
+      delete housesData[editingHouseName];
+      const houseItem = document.querySelector(`.house-item[data-house="${editingHouseName}"]`);
+      if (houseItem) houseItem.remove();
+      if (currentHouse === editingHouseName) {
+        const firstHouse = document.querySelector('.house-item');
+        if (firstHouse) {
+          firstHouse.classList.add('active');
+          loadHouseData(firstHouse.getAttribute('data-house'));
+        } else {
+          // No hay casas restantes, limpiar la UI
+          currentHouse = null;
+          document.getElementById('task-list').innerHTML = '';
+          document.getElementById('person-list').innerHTML = '';
+          document.getElementById('leaderboard-list').innerHTML = '';
+          document.getElementById('user-task-list').innerHTML = '';
+          document.getElementById('punishment-list').innerHTML = '';
+          document.getElementById('notification-list').innerHTML = '';
+          updateNotificationCount(-notificationCount);
+          const houseCalendarDays = document.querySelectorAll('#house-calendar-grid .calendar-day');
+          houseCalendarDays.forEach(day => {
+            const span = day.querySelector('span');
+            day.innerHTML = '';
+            if (span) day.appendChild(span);
+          });
+          const userCalendarDays = document.querySelectorAll('#calendar-grid .calendar-day');
+          userCalendarDays.forEach(day => {
+            const span = day.querySelector('span');
+            day.innerHTML = '';
+            if (span) day.appendChild(span);
+          });
+        }
+      }
+      saveToLocalStorage();
+      closeHouseModal();
+    }
+  }
+
+  function saveHouse() {
+    const houseName = document.getElementById('modal-house-name').value.trim();
+
+    if (houseName === '') {
+      alert('El nombre de la casa no puede estar vacío.');
+      return;
+    }
+
+    if (modalMode === 'create' && housesData[houseName]) {
+      alert('Ya existe una casa con ese nombre.');
+      return;
+    }
+
+    if (modalMode === 'edit' && houseName !== editingHouseName && housesData[houseName]) {
+      alert('Ya existe una casa con ese nombre.');
+      return;
+    }
+
+    if (modalMode === 'create') {
+      housesData[houseName] = {
+        people: modalPeople,
+        tasks: modalTasks,
+        userTasks: [],
+        punishments: []
+      };
+      const houseList = document.getElementById('house-list');
+      const newHouse = document.createElement('li');
+      newHouse.classList.add('house-item');
+      newHouse.setAttribute('data-house', houseName);
+      newHouse.innerHTML = `
+        <span>${houseName}</span>
+        <button onclick="editHouse(this)" aria-label="Editar casa">✏️</button>
+        <button onclick="deleteHouse(this)" aria-label="Eliminar casa">🗑️</button>
+        <button class="share-house-btn" onclick="shareHouse(this)" aria-label="Compartir casa">🔗</button>
+      `;
+      houseList.appendChild(newHouse);
+      setupHouseSelection();
+    } else if (modalMode === 'edit') {
+      if (houseName !== editingHouseName) {
+        housesData[houseName] = {
+          ...housesData[editingHouseName],
+          people: modalPeople,
+          tasks: modalTasks
+        };
+        delete housesData[editingHouseName];
+        const houseItem = document.querySelector(`.house-item[data-house="${editingHouseName}"]`);
+        houseItem.querySelector('span').textContent = houseName;
+        houseItem.setAttribute('data-house', houseName);
+        if (currentHouse === editingHouseName) {
+          currentHouse = houseName;
+        }
+      } else {
+        housesData[houseName].people = modalPeople;
+        housesData[houseName].tasks = modalTasks;
+      }
+    }
+
+    saveToLocalStorage();
+    loadHouseData(houseName);
+    closeHouseModal();
+  }
+
+  function shareHouse(button) {
+    const houseItem = button.closest('.house-item');
+    const houseName = houseItem.getAttribute('data-house');
+    const shareLink = `${window.location.origin}/join?house=${encodeURIComponent(houseName)}`;
+    navigator.clipboard.writeText(shareLink).then(() => {
+      const feedback = document.getElementById('copy-feedback');
+      feedback.classList.add('show');
+      setTimeout(() => feedback.classList.remove('show'), 2000);
+    });
+  }
+
+  function markPunishmentAsRead(button, taskText) {
+    const notificationItem = button.closest('.notification-item');
+    notificationItem.remove();
+    updateNotificationCount(-1);
+  }
+
+  function markNotificationAsRead(button, type, text) {
+    const notificationItem = button.closest('.notification-item');
+    notificationItem.remove();
+    updateNotificationCount(-1);
+  }
+
+  function clearAllPunishments() {
+    housesData[currentHouse].punishments = housesData[currentHouse].punishments.filter(p => p.user !== 'Tú');
+    saveToLocalStorage();
+    loadHouseData(currentHouse);
+  }
+
+  function closeTaskProofModal() {
+    document.getElementById('task-proof-modal-overlay').classList.remove('active');
+    document.getElementById('task-proof-file').value = '';
+    taskToDelete = null;
+  }
+
+  function submitTaskProof() {
+    const fileInput = document.getElementById('task-proof-file');
+    if (!fileInput.value) {
+      alert('Por favor, selecciona un archivo como prueba.');
+      return;
+    }
+
+    closeTaskProofModal();
+    const feedback = document.getElementById('review-feedback');
+    feedback.textContent = 'Revisando tarea completada...';
+    feedback.classList.add('show');
+    setTimeout(() => {
+      feedback.classList.remove('show');
+      document.getElementById('task-delete-message').textContent = `¿Estás seguro de que quieres marcar la tarea "${taskToDelete.text}" como completada?`;
+      document.getElementById('task-delete-modal-overlay').classList.add('active');
+    }, 2000);
+  }
+
+  function closePunishmentProofModal() {
+    document.getElementById('punishment-proof-modal-overlay').classList.remove('active');
+    document.getElementById('punishment-proof-file').value = '';
+    punishmentToComplete = null;
+  }
+
+  function submitPunishmentProof() {
+    const fileInput = document.getElementById('punishment-proof-file');
+    if (!fileInput.value) {
+      alert('Por favor, selecciona un archivo como prueba.');
+      return;
+    }
+
+    closePunishmentProofModal();
+    const feedback = document.getElementById('review-feedback');
+    feedback.textContent = 'Revisando castigo completado...';
+    feedback.classList.add('show');
+    setTimeout(() => {
+      feedback.classList.remove('show');
+      const punishmentItem = document.querySelector(`.punishment-item[data-task-text="${punishmentToComplete}"]`);
+      if (punishmentItem) {
+        punishmentItem.classList.add('completed');
+        punishmentItem.querySelector('.punishment-checkbox').checked = true;
+        housesData[currentHouse].punishments = housesData[currentHouse].punishments.map(p => {
+          if (p.taskText === punishmentToComplete && p.user === 'Tú') {
+            return { ...p, completed: true };
+          }
+          return p;
+        });
+        const notificationItems = document.querySelectorAll('.notification-item span');
+        notificationItems.forEach(item => {
+          if (item.textContent.includes(punishmentToComplete)) {
+            item.closest('.notification-item').remove();
+            updateNotificationCount(-1);
+          }
+        });
+        saveToLocalStorage();
+        loadHouseData(currentHouse);
+      }
+    }, 2000);
+  }
+
+  function closeTaskDeleteModal() {
+    document.getElementById('task-delete-modal-overlay').classList.remove('active');
+    taskToDelete = null;
+  }
+
+  function confirmTaskDelete() {
+    if (taskToDelete) {
+      const { text, type } = taskToDelete;
+      const taskItem = document.querySelector(`.user-task-item[data-text="${text}"][data-type="${type}"]`);
+      if (taskItem) {
+        taskItem.classList.add('completed');
+        taskItem.querySelector('.task-checkbox').checked = true;
+
+        if (type === 'house') {
+          housesData[currentHouse].tasks = housesData[currentHouse].tasks.map(task => {
+            if (task.text === text && task.assignee === 'Tú') {
+              return { ...task, completed: true };
+            }
+            return task;
+          });
+        } else if (type === 'user') {
+          housesData[currentHouse].userTasks = housesData[currentHouse].userTasks.map(task => {
+            if (task.text === text && task.assignee === 'Tú') {
+              return { ...task, completed: true };
+            }
+            return task;
+          });
+        }
+
+        const notificationItems = document.querySelectorAll('.notification-item span');
+        notificationItems.forEach(item => {
+          if (item.textContent.includes(text)) {
+            item.closest('.notification-item').remove();
+            updateNotificationCount(-1);
+          }
+        });
+
+        saveToLocalStorage();
+        loadHouseData(currentHouse);
+        closeTaskDeleteModal();
+      }
+    }
+  }
+
+  function clearAllNotifications() {
+    document.getElementById('notification-list').innerHTML = '';
+    notificationCount = 0;
+    updateNotificationCount(0);
+  }
+
+  setupHouseSelection();
+  loadHouseData("Casa Salamanca");
+</script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'93d850fa8a99afef',t:'MTc0Njg2ODM2MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
+</body>
+</html>

@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Iniciar sesión - DirtyDuties</title>
+  <!-- Importando fuentes de Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@400;500;600&display=stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    
+    body {
+      margin: 0;
+      font-family: 'Montserrat', sans-serif;
+      background: #f4f4f4;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #344f59;
+      width: 100%;
+      padding: 1rem 2rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .header-logo {
+      display: flex;
+      align-items: center;
+    }
+
+    .logo1 {
+      height: 80px;
+      width: auto;
+      object-fit: contain;
+      margin-right: 1rem;
+    }
+
+    .header-title {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 4rem;
+      letter-spacing: 2px;
+      color: #ffffff;
+    }
+
+    .btn-nav {
+      background: #7ff2ec;
+      padding: 0.75rem 1.5rem;
+      border: none;
+      border-radius: 4px;
+      text-decoration: none;
+      color: #000000;
+      font-weight: 600;
+      font-size: 1rem;
+      transition: background 0.2s ease;
+      cursor: pointer;
+      text-transform: uppercase;
+    }
+
+    .btn-nav:hover {
+      background: #5ab8b2;
+    }
+
+    .menu-toggle {
+      display: none;
+      font-size: 1.5rem;
+      color: #ffffff;
+      background: none;
+      border: none;
+      cursor: pointer;
+    }
+
+    .login-container {
+      margin-top: 3rem;
+      margin-bottom: 2rem;
+      background: white;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      width: 90%;
+      max-width: 400px;
+    }
+
+    .login-container h2 {
+      text-align: center;
+      margin-bottom: 1.5rem;
+      font-weight: 600;
+    }
+
+    .login-container input {
+      width: 100%;
+      padding: 0.8rem;
+      margin: 0.5rem 0;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-family: 'Montserrat', sans-serif;
+    }
+
+    .btn-login {
+      display: block;
+      width: 100%;
+      padding: 0.75rem;
+      margin-top: 1rem;
+      background: #7ff2ec;
+      color: #000000;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 1rem;
+      text-align: center;
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: background 0.2s ease;
+    }
+
+    .btn-login:hover {
+      background: #5ab8b2;
+    }
+
+    .separator {
+      display: flex;
+      align-items: center;
+      text-align: center;
+      margin: 1.5rem 0;
+      color: #777;
+    }
+
+    .separator::before,
+    .separator::after {
+      content: '';
+      flex: 1;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .separator::before {
+      margin-right: .5em;
+    }
+
+    .separator::after {
+      margin-left: .5em;
+    }
+
+    .social-login {
+      display: flex;
+      flex-direction: column;
+      gap: 0.8rem;
+      margin-bottom: 1rem;
+    }
+
+    .btn-social {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      padding: 0.75rem;
+      border: none;
+      border-radius: 4px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 1rem;
+      background: #7ff2ec;
+      color: #000000;
+      text-transform: uppercase;
+      transition: background 0.2s ease;
+    }
+
+    .btn-social:hover {
+      background: #5ab8b2;
+    }
+
+    .btn-google, .btn-facebook, .btn-apple {
+      color: #000000;
+    }
+
+    .login-container p {
+      text-align: center;
+      margin-top: 1rem;
+      color: #666;
+    }
+
+    .login-container a {
+      color: #344f59;
+      text-decoration: none;
+      font-weight: 500;
+    }
+
+    .login-container p a {
+      color: #0000FF;
+      text-decoration: underline;
+      font-weight: 600;
+    }
+
+    .icon {
+      margin-right: 8px;
+      font-size: 1.2rem;
+    }
+
+    .footer {
+      margin-top: auto;
+      width: 100%;
+      background: #344f59;
+      padding: 1rem;
+      text-align: center;
+      font-size: 0.8rem;
+      color: #ffffff;
+    }
+
+    @media (max-width: 768px) {
+      header {
+        flex-direction: column;
+        padding: 1rem;
+      }
+
+      .header-logo {
+        width: 100%;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .logo1 {
+        height: 40px;
+      }
+
+      .header-title {
+        font-size: 2rem;
+      }
+
+      .btn-nav {
+        margin-top: 1rem;
+        width: 100%;
+        text-align: center;
+      }
+
+      .menu-toggle {
+        display: block;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="header-logo">
+      <img src="logo.png" alt="Logo DirtyDuties" class="logo1" />
+      <button class="menu-toggle" aria-label="Toggle menu">☰</button>
+    </div>
+    <span class="header-title">DirtyDuties</span>
+    <a href="principal.html" class="btn-nav">Salir</a>
+  </header>
+
+  <div class="login-container">
+    <h2>Inicia sesión</h2>
+    <input type="email" placeholder="Correo electrónico" />
+    <input type="password" placeholder="Contraseña" />
+    <a href="principal.html" class="btn-login">Entrar</a>
+    
+    <div class="separator">o</div>
+    
+    <div class="social-login">
+      <a href="principal.html" class="btn-social btn-google">
+        <span class="icon">G</span>
+        Continuar con Google
+      </a>
+      <a href="principal.html" class="btn-social btn-facebook">
+        <span class="icon">f</span>
+        Continuar con Facebook
+      </a>
+      <a href="principal.html" class="btn-social btn-apple">
+        <span class="icon">🍎</span>
+        Continuar con Apple
+      </a>
+    </div>
+    
+    <p>¿No tienes cuenta? <a href="formulario.html">Regístrate</a></p>
+  </div>
+
+  <footer class="footer">
+    © 2025 DirtyDuties - Todos los derechos reservados
+  </footer>
+<script>
+  // Script para toggle del menú en móviles (para futuras adiciones)
+  document.querySelector('.menu-toggle').addEventListener('click', () => {
+    // Placeholder para funcionalidad futura (como menú desplegable)
+  });
+</script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'93d199221f55dd19',t:'MTc0Njc5NzkxNi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'93eac858be6381db',t:'MTc0NzA2MTk5NC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
+</body>
+</html>
