@@ -1,0 +1,30 @@
+###Test servidor
+GET http://localhost:3000/test
+
+###Para crear usuario
+POST http://localhost:3000/auth/register
+Content-Type: application/json
+
+{
+  "email": "pepe@gmail.com",
+  "user_apodo": "pepe",
+  "password": "Password1$",
+  "nombre": "Al",
+  "apellidos": "233"
+}
+
+### Login
+POST http://localhost:3000/auth/login
+Content-Type: application/json
+
+{
+  "email": "alvarobd76@gmail.com",
+  "password": "Password1$"
+}
+
+
+###Prueba de crear un nuevo access token
+POST http://localhost:3000/auth/refresh
+Cookie: refreshToken=
+
+
