@@ -1,10 +1,11 @@
 import bcrypt from 'bcrypt';
 import { registerSchema, loginSchema  } from './auth.schema.js';
-import { findUserByEmail, findUserByApodo, createUser, saveRefreshToken, findRefreshTokenByUserId } from './auth.repository.js';
+import { findUserByEmail, findUserByApodo, createUser, saveRefreshToken, findRefreshTokenByRefreshId, deleteRefreshTokenById } from './auth.repository.js';
 import jwt from 'jsonwebtoken';
 import { env } from '../../config/env.js';
 import { AuthError, ConflictError } from '../../erorrs/authError.js';
 import { _isoDateTime } from 'zod/v4/core';
+import { randomUUID } from 'node:crypto';
 
 export async function registerUser(data)
 {
@@ -40,7 +41,8 @@ export async function registerUser(data)
 }
 
 
-export async function loginUser(data) {
+export async function loginUser(data) 
+{
     const parsedData = loginSchema.parse(data);
     const { email, password } = parsedData;
 
@@ -63,27 +65,34 @@ export async function loginUser(data) {
         {expiresIn: '15m'}
     );
 
-    //Generar Refresh Token
-    const refreshToken = jwt.sign(
-        {userId: user.user_id}, 
-        env.jwtRefreshToken, 
-        {expiresIn: '7d'}
-    )
-console.log("REFRESH GENERADO:", refreshToken)
-
-    const refreshHashed = await bcrypt.hash(refreshToken, parseInt(env.saltRounds));
-
-    const expiresAt = new Date(Date.now() + 7*24*60*60*1000)
-    await saveRefreshToken(user.user_id, refreshHashed, expiresAt);
-
+    const refreshToken = await generarRefreshToken(user.user_id)
     return { accessToken, refreshToken };
 }
 
 
+export async function generarRefreshToken(userId) 
+{
+    const refreshId = randomUUID();
+    const refreshToken = jwt.sign(
+        {userId: userId, 
+         jti: refreshId,
+        }, 
+        env.jwtRefreshToken, 
+        {expiresIn: '7d'}
+    )
+    const refreshHashed = await bcrypt.hash(refreshToken, parseInt(env.saltRounds));
+
+    const expiresAt = new Date(Date.now() + 7*24*60*60*1000)
+    const result = await saveRefreshToken(userId, refreshId, refreshHashed, expiresAt);
+    if(!result)
+        throw new AuthError('Token no generado')
+
+    return refreshToken;
+}
+
 export async function refreshAccessToken(refreshToken)
 {
     let decoded
-    console.log("TOKEN RECIBIDO EN REFRESH:", refreshToken)
 
     try{
         decoded = jwt.verify(refreshToken, env.jwtRefreshToken)
@@ -91,26 +100,23 @@ export async function refreshAccessToken(refreshToken)
         throw new AuthError('Refresh token invalido aqui')
     }
 
-    const tokensGuardados = await findRefreshTokenByUserId(decoded.userId)
+    const refreshTokenAlmacenado = await findRefreshTokenByRefreshId(decoded.jti);
+    
+    if (!refreshTokenAlmacenado || refreshTokenAlmacenado.length === 0)
+        throw new AuthError('Refresh token invalido')
 
-    if(!tokensGuardados.length)
-        throw new AuthError('Refresh token invalido o aqui')
-
-    //Se comprueba si alguno coincide porque cada usuario puede tener varios refersh tokens, uno por cada dispositivo suyo
-    let isValid = false
-
-    for(const token of tokensGuardados)
-    {
-        const match = await bcrypt.compare(refreshToken, token.token_hash)
-        if(match)
-        {
-            isValid = true 
-            break
-        }
-    }
-
+    const isValid = await bcrypt.compare(refreshToken, refreshTokenAlmacenado[0].token_hash);
+    
     if(!isValid)
-        throw new AuthError('Refresh token invalido o igual aqui')
+        throw new AuthError('Refresh token invalido')
+
+    //Se genera nuevo refresh token cada vez que se genere otro access token para evitar ataques
+    //Primero se borra el actual 
+    const result = await deleteRefreshToken(refreshToken)
+    if(!result || result.affectedRows === 0)
+        throw new AuthError('Refresh Token invalido')
+
+    const newRefreshToken = await generarRefreshToken(decoded.userId)
 
     //Se genera nuevo access token
     const newAccessToken = jwt.sign(
@@ -119,5 +125,22 @@ export async function refreshAccessToken(refreshToken)
         { expiresIn: '15m' }
     )
 
-    return newAccessToken
+    return { newAccessToken, newRefreshToken }
+}
+
+
+export async function deleteRefreshToken(refreshToken)
+{
+    const decoded = jwt.verify(refreshToken, env.jwtRefreshToken)
+
+    if(!decoded)
+        throw new AuthError('Refresh Token invalido')
+
+    const result = await deleteRefreshTokenById(decoded.jti)
+
+    if(!result || result.affectedRows === 0)
+            throw new AuthError('Refresh Token invalido')
+    
+    return true
+
 }

@@ -1,4 +1,4 @@
-import { registerUser, loginUser, refreshAccessToken  } from "./auth.service.js";
+import { registerUser, loginUser, refreshAccessToken, deleteRefreshToken  } from "./auth.service.js";
 import { AuthError } from '../../erorrs/authError.js';
 
 export async function registerController(req, res, next) 
@@ -30,7 +30,8 @@ export async function loginControlller(req, res, next)
 
         return res.status(200).json({
             message: 'Login correcto',
-            accessToken
+            accessToken, 
+            refreshToken
         });
     } catch (error){
         next(error)
@@ -42,20 +43,61 @@ export async function refreshController(req, res, next)
 {
     try {
         const refreshToken = req.cookies.refreshToken
-        console.log("REQ.COOKIES:", req.cookies)
 
         if(!refreshToken)
-        {
             throw new AuthError('Refresh token requerido')
-        }
 
-        const newAccessToken = await refreshAccessToken(refreshToken)
+        const { newAccessToken, newRefreshToken } = await refreshAccessToken(refreshToken)
+
+        res.cookie('refreshToken', newRefreshToken, {
+            httpOnly: true,
+            secure: true,
+            sameSite: 'strict'
+        });
 
         return res.status(200).json({
-            accessToken: newAccessToken
+            accessToken: newAccessToken, 
+            newRefreshToken
         })
     } catch(err){
         next(err)
     }
 
+}
+
+
+export async function logoutController(req, res, next) 
+{
+    try{
+        const refreshToken = req.cookies.refreshToken
+        
+        if(!refreshToken)
+            throw new AuthError('Refresh token requerido')
+
+        const result = await deleteRefreshToken(refreshToken)
+
+        if(!result || result.affectedRows === 0)
+                throw new AuthError('Refresh Token invalido')
+
+        //Limpiar cookie
+        res.clearCookie('refreshToken', {
+            httpOnly: true, 
+            secure: true, 
+            sameSite: 'strict'
+        })
+
+        return res.status(200).json({
+            message: 'Logout exitoso'
+        })
+    } catch(err){
+        next(err)
+    }
+}
+
+export async function meController (req, res, next)
+{
+    return res.status(200).json({
+        message: 'Usuario autenticado',
+        user: req.user
+    });
 }

@@ -1,4 +1,4 @@
-import { pool }  from '../../database/connection.js'
+import { pool }  from '../../database/connection.js';
 import { ConecctionError } from '../../erorrs/authError.js';
 
 //Buscar usuarios por email 
@@ -43,12 +43,12 @@ export async function createUser({userApodo, email, nombre, apellidos , password
     }
 }
 
-export async function saveRefreshToken(userId, tokenHash, expiresAt) 
+export async function saveRefreshToken(userId, refreshId, tokenHash, expiresAt) 
 {
     try{
         const [ rows ] = await pool.query(
-            `INSERT INTO refresh_tokens (user_id, token_hash, expires, created) VALUES (?, ?, ?, NOW())`,
-            [userId, tokenHash, expiresAt]
+            `INSERT INTO refresh_tokens (id, user_id, token_hash, expires, created) VALUES (?, ?, ?, ?, NOW())`,
+            [refreshId, userId, tokenHash, expiresAt]
         );
 
         return rows;
@@ -58,17 +58,33 @@ export async function saveRefreshToken(userId, tokenHash, expiresAt)
     }
 }
 
-export async function findRefreshTokenByUserId(userId)
+export async function findRefreshTokenByRefreshId(refreshId)
 {
     try{
     const [ rows ] = await pool.query(
-        'SELECT * FROM refresh_tokens where user_id = ?',
-        [userId]
+        'SELECT * FROM refresh_tokens where id = ?',
+        [refreshId]
     );
 
     return rows;
 
     } catch(err) {
         throw new ConecctionError('Error de conexión con la base de datos')
+    }
+}
+
+
+export async function deleteRefreshTokenById(refreshId)
+{
+     try{
+        const [ rows ] = await pool.query(
+            `DELETE FROM refresh_tokens where id = ?`,
+            [refreshId]
+        );
+
+        return rows;
+
+     } catch(err) {
+        throw new ConecctionError('Error de conexión con la base de datos al borrar el token')
     }
 }

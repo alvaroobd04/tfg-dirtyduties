@@ -1,5 +1,6 @@
 import express from 'express';
 import authRoutes from './modules/auth/auth.routes.js';
+import housesRoutes from './modules/houses/houses.routes.js';
 import { errorHandler } from './middlewares/erorr.middleware.js';
 import cookieParser from 'cookie-parser';
 
@@ -14,6 +15,7 @@ app.use(cookieParser())
 
 //Rutas
 app.use('/auth', authRoutes);
+app.use('/houses', housesRoutes);
 
 app.use(errorHandler);
 

@@ -27,7 +27,22 @@ Los detalles funcionales y técnicos de la aplicación se irán ampliando progre
 
 ## Estructura del repositorio
 
-```text
 tfg-dirtyduties/
-├── Web/            # Frontend de la aplicación
-├── README.md       # Documentación general del proyecto
+│
+├── Backend/               # API REST (Node.js + Express)
+│   ├── src/
+│   │   ├── config/        # Configuración de entorno
+│   │   ├── database/      # Conexión a base de datos
+│   │   ├── errors/        # Gestión centralizada de errores
+│   │   ├── middlewares/   # Middlewares (auth, error handler)
+│   │   ├── modules/       # Lógica modular (auth, tasks...)
+│   │   ├── app.js         # Configuración de Express
+│   │   └── server.js      # Punto de entrada del servidor
+│   ├── package.json
+│   └── .env               # Variables de entorno (no versionado)
+│
+├── FrontEnd/              # Aplicación cliente (Vue.js)
+│
+├── .gitignore
+└── README.md              # Documentación general del proyecto
+
