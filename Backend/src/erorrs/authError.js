@@ -14,6 +14,6 @@ export const ValidationError = createErrorFactory('ValidationError', 400)
 export const AuthError = createErrorFactory('AuthError', 401)
 export const ForbiddenError = createErrorFactory('ForbiddenError', 403)
 export const NotFoundError = createErrorFactory('NotFoundError', 404)
-export const ConflictError = createErrorFactory('ConflictError', 409);
+export const ConflictError = createErrorFactory('ConflictError', 409)
 export const ConecctionError = createErrorFactory('ConecctionError', 500)
 export const InternalServerError = createErrorFactory('InternalServerError', 500)
