@@ -5,7 +5,7 @@ export const createErrorFactory = (name, statusCode) => {
             this.name = name 
             this.statusCode = statusCode
             this.details = details
-            Error.captureStackTrace?.(this, this.constrcutor)
+            Error.captureStackTrace?.(this, this.constructor)
         }
     }
 }

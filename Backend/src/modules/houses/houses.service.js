@@ -41,7 +41,7 @@ export async function getHouseById(houseId)
 
 export async function getMembersService(houseId)
 {
-    const members = await getMembersByHouseId(houseId)
+    const members = await getMembersByHouseId(houseId);
 
     return members
 }

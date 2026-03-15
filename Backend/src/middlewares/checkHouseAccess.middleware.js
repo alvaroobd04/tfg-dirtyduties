@@ -5,13 +5,13 @@ export async function checkHouseAccess(req, res, next)
 {
     try {
         const userId = req.user?.userId;
-        const houseId = Number(req.params.houseId) ?? req.params.id;
+        const houseId = Number(req.params.houseId);
         
         if(!userId)
             throw new AuthError("Token inválido")
 
-        if(!houseId || Number.isNaN(houseId))
-            throw new AuthError("House id inválido")
+        if (!houseId || Number.isNaN(houseId))
+            throw new AuthError("House id inválido");
 
         const disponible = await isUserInHouse(userId, houseId);
 
