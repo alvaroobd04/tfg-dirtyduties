@@ -5,5 +5,13 @@ export const createHouseSchema = z.object({
         .string()
         .trim()
         .min(2, 'El nombre de la casa debe tener al menos 2 caracteres')
-        .max(255, 'El nombre de la casa debe tener como maximo 255 caracteres')
+        .max(255, 'El nombre de la casa debe tener como maximo 255 caracteres'),
+    
+    tasks: z.array(
+    z.object({
+      nombre: z.string(),
+      dificultad: z.number(),
+      periodicidad: z.number()
+    })
+  ).optional()
 });

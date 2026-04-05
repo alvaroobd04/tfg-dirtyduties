@@ -50,7 +50,7 @@ export async function createExecutions(executions)
 {
     try {
         if(!executions || executions.length === 0)
-                return;
+            return;
         
         const values = executions.map(e => [e.tarea_id, e.usuario_id, e.fecha, e.estado]);
 
@@ -89,9 +89,10 @@ export async function getMonthExecutions(houseId) {
             .toISOString().split('T')[0];
  
         const [rows] = await pool.query(
-            `SELECT e.fecha, t.nombre AS tarea, e.usuario_id AS usuario, e.estado
+            `SELECT e.id, e.fecha, t.nombre AS taskName, u.nombre AS usuario, e.estado
              FROM ejecucion e
              INNER JOIN tarea t ON e.tarea_id = t.id
+             INNER JOIN usuarios u ON u.user_id = e.usuario_id
              WHERE t.casa_id = ?
                AND e.fecha >= ?
                AND e.fecha < ?
@@ -114,4 +115,75 @@ export async function completeExecution(executionId) {
     } catch (err) {
         throw new ConecctionError('Error al completar la ejecución');
     }
+}
+
+export async function deleteTaskById(houseId, taskId) 
+{
+  const [result] = await pool.query(
+    `DELETE FROM tarea 
+     WHERE id = ? AND casa_id = ?`,
+    [taskId, houseId]
+  );
+
+  return result.affectedRows > 0;
+}
+
+export async function updateTaskById(houseId, taskId, data) 
+{
+  const [result] = await pool.query(
+    `UPDATE tarea 
+     SET nombre = ?, dificultad = ?, periodicidad = ?
+     WHERE id = ? AND casa_id = ?`,
+    [data.nombre, data.dificultad, data.periodicidad, taskId, houseId]
+  );
+
+  return result.affectedRows > 0;
+}
+
+export async function updateExecutionValidation(executionId, result) 
+{
+  await pool.query(
+    `UPDATE ejecucion 
+     SET validation_result = ?, 
+         validated_at = NOW(),
+         estado = ?
+     WHERE id = ?`,
+    [result ? 'valid' : 'invalid', result ? 'completada' : 'pendiente', executionId]
+  );
+}
+
+export async function getExecutionById(executionId) 
+{
+  const [rows] = await pool.query(
+    `SELECT * FROM ejecucion WHERE id = ?`,
+    [executionId]
+  );
+
+  return rows[0];
+}
+
+export async function createPunishmentExecution(execution) 
+{
+  await pool.query(
+    `INSERT INTO ejecucion (tarea_id, usuario_id, fecha, estado)
+     VALUES (?, ?, ?, 'pendiente')`,
+    [execution.tarea_id, execution.usuario_id, execution.fecha]
+  );
+}
+
+export async function getMyExecutions(userId, houseId)
+{
+  const today = new Date().toISOString().split('T')[0]
+
+  const [rows] = await pool.query(`
+    SELECT e.id, e.fecha, t.nombre AS taskName, e.estado, e.validation_result
+    FROM ejecucion e
+    JOIN tarea t ON e.tarea_id = t.id
+    WHERE e.usuario_id = ?
+      AND t.casa_id = ?
+      AND e.fecha BETWEEN ? AND DATE_ADD(?, INTERVAL 7 DAY)
+    ORDER BY e.fecha ASC
+  `, [userId, houseId, today, today])
+
+  return rows
 }

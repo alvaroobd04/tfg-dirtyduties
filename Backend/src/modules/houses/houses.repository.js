@@ -53,7 +53,7 @@ export async function getHousesByUserId(userId)
 {
     try {
         const [ rows ] = await pool.query(
-             `SELECT c.id, c.nombre, c.created_at, hu.joined_at FROM casa c JOIN house_users hu ON hu.house_id = c.id WHERE hu.user_id = ? ORDER BY c.created_at DESC`,
+             `SELECT c.id, c.nombre FROM casa c JOIN house_users hu ON hu.house_id = c.id WHERE hu.user_id = ? ORDER BY c.created_at DESC`,
             [userId]
         );
         
@@ -144,4 +144,84 @@ export async function deleteUserFromHouse(userId, houseId)
     } finally {
         connection.release();
     }
+}
+
+export async function getUsersByHouseId(houseId)
+{
+  const [rows] = await pool.query(
+    `SELECT u.user_id, u.user_apodo 
+     FROM house_users hu
+     JOIN usuarios u ON u.user_id = hu.user_id
+     WHERE hu.house_id = ?`,
+    [houseId]
+  );
+
+  return rows;
+}
+
+export async function getTasksByHouseId(houseId)
+{
+  const [rows] = await pool.query(
+    `SELECT t.id, t.nombre, t.dificultad, t.periodicidad
+     FROM tarea t
+     WHERE t.casa_id = ?`,
+    [houseId]
+  );
+
+  return rows;
+}
+
+export async function updateHouseNameById(houseId, nombre) {
+  const [result] = await pool.query(
+    `UPDATE casa SET nombre = ? WHERE id = ?`,
+    [nombre, houseId]
+  );
+
+  return result.affectedRows > 0;
+}
+
+export async function createHouseWithTasks(nombre, userId, tasks) {
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    // 1. crear casa
+    const [houseResult] = await connection.query(
+      'INSERT INTO casa (nombre) VALUES (?)',
+      [nombre]
+    );
+
+    const houseId = houseResult.insertId;
+
+    // 2. añadir usuario
+    await connection.query(
+      'INSERT INTO house_users (house_id, user_id, joined_at) VALUES (?, ?, NOW())',
+      [houseId, userId]
+    );
+
+    // 3. crear tareas
+    for (const t of tasks) {
+      await connection.query(
+        `INSERT INTO tarea (nombre, dificultad, periodicidad, casa_id)
+         VALUES (?, ?, ?, ?)`,
+        [t.nombre, t.dificultad, t.periodicidad, houseId]
+      );
+    }
+
+    await connection.commit();
+
+    return {
+      id: houseId,
+      nombre,
+      tasks,
+      users: [{ user_id: userId }]
+    };
+
+  } catch (err) {
+    await connection.rollback();
+    throw new ConecctionError('Error al crear la casa con tareas');
+  } finally {
+    connection.release();
+  }
 }

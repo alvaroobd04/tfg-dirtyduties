@@ -1,0 +1,139 @@
+/* styleFormulario.css */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: 'Montserrat', sans-serif;
+    margin: 0;
+    padding: 0;
+    text-align: center;
+    background: #f4f4f4;
+    color: #333;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Contenedor del título */
+.title-container {
+    background: #344f59;
+    color: #ffffff;
+    padding: 2rem;
+    font-size: 2rem;
+    font-weight: 600;
+    text-align: center;
+    width: 100%;
+}
+
+/* Contenedor principal */
+.main-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 2rem;
+    flex: 1;
+}
+
+/* Sección de preguntas */
+.input-section {
+    width: 100%;
+    max-width: 600px;
+    background: #ffffff;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Estilos de los inputs y selects */
+input, select, textarea {
+    padding: 0.8rem;
+    width: 100%;
+    margin-top: 0.5rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 1rem;
+    font-family: 'Montserrat', sans-serif;
+    color: #333;
+}
+
+textarea {
+    resize: vertical;
+    min-height: 120px;
+}
+
+/* Estilos de los labels */
+label {
+    font-size: 1.1rem;
+    color: #344f59;
+    font-weight: 500;
+    display: block;
+    margin-bottom: 0.5rem;
+}
+
+/* Estilos del botón */
+button {
+    background: #7ff2ec;
+    color: #000000;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 4px;
+    margin-top: 1rem;
+    text-transform: uppercase;
+    transition: background 0.2s ease;
+}
+
+button:hover {
+    background: #5ab8b2;
+}
+
+/* Estilos del botón de omitir */
+.skip-btn {
+    background: #344f59;
+    color: #ffffff;
+}
+
+.skip-btn:hover {
+    background: #1a2f36;
+}
+
+/* Pie de página */
+footer {
+    background: #344f59;
+    color: #ffffff;
+    padding: 1rem;
+    text-align: center;
+    width: 100%;
+    margin-top: auto;
+}
+
+footer p {
+    font-size: 0.9rem;
+}
+
+/* Estilos responsivos */
+@media (max-width: 768px) {
+    .title-container {
+        padding: 1.5rem;
+        font-size: 1.5rem;
+    }
+
+    .main-container {
+        padding: 1rem;
+    }
+
+    .input-section {
+        padding: 1rem;
+    }
+
+    button {
+        padding: 0.6rem 1.2rem;
+        font-size: 0.9rem;
+    }
+}

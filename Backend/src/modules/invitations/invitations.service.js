@@ -2,6 +2,8 @@ import { joinInvitationSchema  } from "./invitations.schema.js";
 import { getInvitationsByHouse,createInvitation, isUserInHouse, addUserToHouse, markInvitationUsed, findInvitationByToken} from "./invitations.repository.js";
 import { ConflictError, NotFoundError, ValidationError } from "../../erorrs/authError.js";
 import { randomBytes } from "crypto";
+import { plantMonth } from "../tasks/task.service.js"
+import { deleteFutureExecutions } from "../tasks/task.repository.js"
 
 const EXPIRATION_DAYS = 7;
 
@@ -20,6 +22,15 @@ function getExpirationDate()
 
 export async function createInvitationService(houseId) 
 {
+    const existing = await getInvitationsByHouse(houseId);
+
+    if (existing.length > 0) {
+        return {
+            token: existing[0].token,
+            expiresAt: existing[0].fecha_expiracion
+        };
+    }
+
     const token = generateToken();
     const fechaExpiracion = getExpirationDate();
  
@@ -38,7 +49,7 @@ export async function joinByTokenService(data, userId)
         throw new NotFoundError('El token de invitación no existe');
     }
  
-    if (invitation.usado) {
+    if (invitation.used) {
         throw new ConflictError('Este token ya ha sido utilizado');
     }
  
@@ -54,6 +65,10 @@ export async function joinByTokenService(data, userId)
     }
  
     await addUserToHouse(userId, invitation.casa_id);
+
+    await deleteFutureExecutions(invitation.casa_id);
+    await plantMonth(invitation.casa_id, new Date());
+
     await markInvitationUsed(invitation.id);
  
     return { houseId: invitation.casa_id };

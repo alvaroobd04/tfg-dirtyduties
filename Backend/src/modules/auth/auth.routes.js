@@ -9,8 +9,6 @@ router.post('/login', loginControlller);
 router.post('/refresh', refreshController);
 router.post('/logout', logoutController);
 
-//Ruta para usuarios logueados
-router.get('/me', autenticarToken, meController);
 
 
 export default router;

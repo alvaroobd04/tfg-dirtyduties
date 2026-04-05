@@ -9,6 +9,7 @@ import cors from 'cors';
 
 const app = express();
 
+app.disable('etag');
 //Se desactiva porque es información delicada que los atacantes pueden usar para ataques
 app.disable('x-powered-by');
 

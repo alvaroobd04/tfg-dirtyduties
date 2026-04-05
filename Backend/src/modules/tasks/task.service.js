@@ -1,6 +1,7 @@
 import { createTaskSchema } from "./task.schema.js";
-import { createTask, getTasksByHouseId, createExecutions, deleteFutureExecutions, getMonthExecutions, completeExecution, getUsersByHouseId } from "./task.repository.js";
+import { createTask, getTasksByHouseId, createExecutions, deleteFutureExecutions, getMonthExecutions, completeExecution, getUsersByHouseId, deleteTaskById, updateTaskById, getExecutionById, updateExecutionValidation, createPunishmentExecution, getMyExecutions } from "./task.repository.js";
 import { NotFoundError } from "../../erorrs/authError.js";
+import { validateTaskWithAI } from './ai.validation.service.js';
 
 function generateMonthlyDates(periodicidad, from)
 {
@@ -81,13 +82,12 @@ function assignUsers(executions, userIds)
 }
 
 //Planifica todas las tareas de la casa desde la fecha de FROM hasta final de mes
-async function plantMonth(houseId, from)
+export async function plantMonth(houseId, from)
 {
     const [ users, tasks ] = await Promise.all([
         getUsersByHouseId(houseId),
         getTasksByHouseId(houseId),
     ]);
-
     if(!users.length || !tasks.length)
         return;
 
@@ -112,7 +112,10 @@ export async function createTaskService(data, houseId)
 {
     const parsed = createTaskSchema.parse(data);
 
-    const taskId = await createTask(data, houseId)
+    const taskId = await createTask(data, houseId);
+
+    await deleteFutureExecutions(houseId);
+    await plantMonth(houseId, new Date());
 
     return{
         id:taskId, 
@@ -127,7 +130,15 @@ export async function getTasksByHouseIdService(houseId)
 
 export async function getMonthCalendarService(houseId)
 {
-    return await getMonthExecutions(houseId);
+    let executions = await getMonthExecutions(houseId);
+
+    if(!executions || executions.length === 0)
+    {
+        await plantMonth(houseId, new Date());
+        executions = await getMonthExecutions(houseId);
+    }
+
+    return executions;
 }
 
 export async function completeExecutionService(executionId)
@@ -142,4 +153,91 @@ export async function replanthMonthService(houseId)
 {
     await deleteFutureExecutions(houseId);
     await plantMonth(houseId, new Date());
+}
+
+export async function deleteTaskService(houseId, taskId) 
+{
+
+  const deleted = await deleteTaskById(houseId, taskId);
+
+  if (!deleted) {
+    throw new NotFoundError("La tarea no existe o no pertenece a esta casa");
+  }
+
+}
+
+export async function updateTaskService(data, houseId, taskId) {
+
+  const parsed = createTaskSchema.parse(data); // reutilizas schema ✔️
+
+  const updated = await updateTaskById(houseId, taskId, parsed);
+
+  if (!updated) {
+    throw new NotFoundError("La tarea no existe o no pertenece a esta casa");
+  }
+
+  // recalcular calendario
+  await deleteFutureExecutions(houseId);
+  await plantMonth(houseId, new Date());
+
+  return {
+    id: Number(taskId),
+    ...parsed
+  };
+}
+
+export async function validateExecutionService(executionId, file, taskName, userId) 
+{
+  const execution = await getExecutionById(executionId);
+
+    if (execution.usuario_id !== userId)
+        throw new ForbiddenError('No puedes validar esta tarea');
+
+    if (!execution)
+        throw new NotFoundError('Ejecucion no encontrada');
+
+    const now = new Date();
+    const executionDate = new Date(execution.fecha);
+
+    const diffDays = (executionDate - now) / (1000 * 60 * 60 * 24);
+
+    if (diffDays > 2)
+    throw new Error('Aún no puedes validar esta tarea');
+
+  // IA VALIDATION
+  const { valid, confidence } = await validateTaskWithAI(file.buffer, taskName);
+
+  const MIN_CONFIDENCE = 0.6;
+
+  // si no hay buen grado de confianza --> nada
+  if (confidence < MIN_CONFIDENCE) {
+    return {
+      status: 'retry',
+      message: 'La IA no está segura, sube otra imagen',
+      confidence
+    };
+  }
+
+  // Si hay buen grado de confianza --> seguimos
+  await updateExecutionValidation(executionId, valid, confidence);
+
+  //Si esta segura y esta mal --> castigo
+  if (!valid) {
+    await createPunishmentExecution({
+      tarea_id: execution.tarea_id,
+      usuario_id: execution.usuario_id,
+      fecha: execution.fecha
+    });
+  }
+
+  return {
+    status: 'done',
+    valid,
+    confidence
+  };
+}
+
+export async function getMyExecutionsService(userId, houseId)
+{
+  return await getMyExecutions(userId, houseId)
 }

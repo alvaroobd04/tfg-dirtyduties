@@ -23,8 +23,8 @@ export async function loginControlller(req, res, next)
         //Refresh Token como cookie httpOnly
         res.cookie('refreshToken', refreshToken, {
             httpOnly: true,                                   //Para que no se pueda recuperar la cookie desde JavaScript
-            secure: process.env.NODE_ENV === 'production',   //Si es true el navegador solo envia la cookie por https aunque en desarrollo suele ser false
-            sameSite: 'strict',                             //Evita que el navegador envíe la cookie en todas la peticiones
+            secure: false,   //Si es true el navegador solo envia la cookie por https aunque en desarrollo suele ser false
+            sameSite: 'lax',                             //Evita que el navegador envíe la cookie en todas la peticiones
             maxAge: 7*24*60*60*1000                         //Cuanto dura la cookie
         })
 

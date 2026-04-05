@@ -1,4 +1,4 @@
-import { createNewHouse, getHouseFromUser, getHouseById, getMembersService, deleteUserFromHouseService } from './houses.service.js';
+import { createNewHouse, getHouseFromUser, getHouseById, getMembersService, deleteUserFromHouseService, getHouseDetails, updateHouseNameService } from './houses.service.js';
 
 export async function createHouseController(req, res, next)
 {
@@ -76,4 +76,34 @@ export async function deleteUserFromHouseController(req, res, next)
     } catch(error){
         next(error);
     }
+}
+
+export async function getHouseDetailsController(req, res, next) 
+{
+  try {
+    const houseId = req.params.houseId;
+
+    const house = await getHouseDetails(houseId);
+
+    return res.status(200).json(house);
+
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function updateHouseNameController(req, res, next) {
+  try {
+    const houseId = req.params.houseId;
+
+    const house = await updateHouseNameService(req.body, houseId);
+
+    return res.status(200).json({
+      message: 'Nombre de la casa actualizado correctamente',
+      house
+    });
+
+  } catch (error) {
+    next(error);
+  }
 }

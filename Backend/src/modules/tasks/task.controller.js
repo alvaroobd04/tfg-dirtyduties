@@ -1,4 +1,4 @@
-import { createTaskService, getTasksByHouseIdService, replanthMonthService, getMonthCalendarService, completeExecutionService } from "./task.service.js";
+import { createTaskService, getTasksByHouseIdService, replanthMonthService, getMonthCalendarService, completeExecutionService, deleteTaskService, updateTaskService, validateExecutionService, getMyExecutionsService } from "./task.service.js";
 
 export async function createtaskController(req, res, next)
 {
@@ -65,4 +65,72 @@ export async function replanthMonthController(req, res, next)
     } catch (error) {
         next(error);
     }
+}
+
+export async function deleteTaskController(req, res, next) 
+{
+  try {
+    const { houseId, taskId } = req.params;
+
+    await deleteTaskService(houseId, taskId);
+
+    res.status(200).json({ message: "Tarea eliminada correctamente" });
+
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function updateTaskController(req, res, next) 
+{
+  try {
+    const { houseId, taskId } = req.params;
+
+    const task = await updateTaskService(req.body, houseId, taskId);
+
+    return res.status(200).json({
+      message: "Tarea actualizada correctamente",
+      task
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function validateExecutionController(req, res, next) 
+{
+  try {
+    const { executionId } = req.params;
+    const { taskName } = req.body;
+    if (!req.file) {
+      throw new Error('Imagen requerida');
+    }
+
+    const result = await validateExecutionService(Number(executionId), req.file, taskName, req.user.userId);
+
+    return res.status(200).json({
+      message: 'Validación realizada',
+      valid: result.valid,
+      confidence: result.confidence
+    });
+
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function getMyExecutionsController(req, res, next) 
+{
+  try {
+    const userId = req.user.userId
+    const houseId = req.houseId
+
+    const executions = await getMyExecutionsService(userId, houseId)
+
+    return res.status(200).json({ executions })
+
+  } catch (error) {
+    next(error)
+  }
 }
