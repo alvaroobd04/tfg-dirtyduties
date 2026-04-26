@@ -88,3 +88,47 @@ export async function deleteRefreshTokenById(refreshId)
         throw new ConecctionError('Error de conexión con la base de datos al borrar el token')
     }
 }
+
+export async function getUserProfile(userId) 
+{
+  const [rows] = await pool.query(
+    `SELECT 
+        user_id,
+        user_apodo,
+        nombre,
+        apellidos,
+        email
+     FROM USUARIOS
+     WHERE user_id = ?`,
+    [userId]
+  );
+
+  return rows[0] || null;
+}
+
+export async function updateUserProfile(userId, data) 
+{
+  const { nombre, apellidos, user_apodo, email } = data;
+
+  await pool.query(
+    `UPDATE USUARIOS 
+     SET nombre = ?, apellidos = ?, user_apodo = ?, email = ?
+     WHERE user_id = ?`,
+    [nombre, apellidos, user_apodo, email, userId]
+  );
+
+  return await getUserProfile(userId);
+}
+
+export async function updateUserPassword(userId, newPasswordHash) 
+{
+    try {
+        const [result] = await pool.query(
+            'UPDATE USUARIOS SET password_hash = ? WHERE user_id = ?',
+            [newPasswordHash, userId]
+        );
+        return result;
+    } catch (err) {
+        throw new Error('Error al actualizar la contraseña');
+    }
+}

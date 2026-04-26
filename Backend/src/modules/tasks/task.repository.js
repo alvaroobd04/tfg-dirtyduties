@@ -55,7 +55,7 @@ export async function createExecutions(executions)
         const values = executions.map(e => [e.tarea_id, e.usuario_id, e.fecha, e.estado]);
 
         await pool.query(
-            'INSERT INTO ejecucion (tarea_id, usuario_id, fecha, estado) VALUES ?',
+            'INSERT INTO ejecucion (tarea_id, usuario_id, fecha, estado, tipo) VALUES ?',
             [values]
         );
     } catch (error) {
@@ -165,8 +165,8 @@ export async function getExecutionById(executionId)
 export async function createPunishmentExecution(execution) 
 {
   await pool.query(
-    `INSERT INTO ejecucion (tarea_id, usuario_id, fecha, estado)
-     VALUES (?, ?, ?, 'pendiente')`,
+    `INSERT INTO ejecucion (tarea_id, usuario_id, fecha, estado, tipo)
+     VALUES (?, ?, ?, 'pendiente', 'castigo')`,
     [execution.tarea_id, execution.usuario_id, execution.fecha]
   );
 }
@@ -176,7 +176,7 @@ export async function getMyExecutions(userId, houseId)
   const today = new Date().toISOString().split('T')[0]
 
   const [rows] = await pool.query(`
-    SELECT e.id, e.fecha, t.nombre AS taskName, e.estado, e.validation_result
+    SELECT e.id, e.fecha, t.nombre AS taskName, e.estado, e.validation_result, e.tipo
     FROM ejecucion e
     JOIN tarea t ON e.tarea_id = t.id
     WHERE e.usuario_id = ?
@@ -186,4 +186,32 @@ export async function getMyExecutions(userId, houseId)
   `, [userId, houseId, today, today])
 
   return rows
+}
+
+export async function getPendingTasksBefore(date) 
+{
+  try {
+    const formattedDate = date.toISOString().split('T')[0];
+
+    const [rows] = await pool.query(`
+      SELECT e.*
+      FROM ejecucion e
+      WHERE e.estado = 'pendiente'
+        AND e.fecha < ?
+    `, [formattedDate]);
+
+    return rows;
+  } catch (err) {
+    throw new ConecctionError('Error al obtener tareas pendientes vencidas');
+  }
+}
+
+export async function markExecutionAsFailed(executionId) 
+{
+  await pool.query(
+    `UPDATE ejecucion 
+     SET estado = 'fallida'
+     WHERE id = ?`,
+    [executionId]
+  );
 }

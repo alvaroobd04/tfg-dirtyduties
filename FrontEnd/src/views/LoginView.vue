@@ -17,7 +17,8 @@
         {{ loading ? "Entrando..." : "Acceder" }}
       </button>
 
-      <a @click="forgotPassword">¿Olvidaste tu contraseña?</a>
+      <p @click="openResetPasswordModal" class="reset-password-link">¿Olvidaste tu contraseña?</p>
+      <ResetPasswordModal :isVisible="showResetPasswordModal" @close="closeResetPasswordModal" />
 
       <p v-if="errorMessage" class="error">{{ errorMessage }}</p>
 
@@ -35,11 +36,10 @@
     <footer class="footer">© 2025 DirtyDuties - Todos los derechos reservados</footer>
   </div>
 </template>
-
 <script setup>
 import { ref } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import { useAuthStore } from "@/composables/useAuth.js"; 
+import { useAuthStore } from "@/composables/useAuth.js";
 
 const router = useRouter();
 const route = useRoute();
@@ -50,6 +50,14 @@ const password = ref("");
 const loading = ref(false);
 const errorMessage = ref("");
 
+const showForgotModal = ref(false); // Variable reactiva para mostrar el modal de reset
+const forgotEmail = ref("");
+const forgotEmailError = ref("");
+const forgotErrorMessage = ref("");
+const forgotLoading = ref(false);
+const showSuccessPopup = ref(false);
+
+// Lógica de Login
 const handleLogin = async () => {
   if (loading.value) return;
 
@@ -64,7 +72,6 @@ const handleLogin = async () => {
     return;
   }
 
-  // REDIRECT SI EXISTE
   const redirect = route.query.redirect;
 
   if (redirect) {
@@ -74,10 +81,52 @@ const handleLogin = async () => {
   }
 };
 
-const forgotPassword = () => {
-  alert("Funcionalidad en desarrollo")
-}
+// Función para abrir el modal de olvido de contraseña
+const openForgotPasswordModal = () => {
+  showForgotModal.value = true;
+};
 
+// Función para cerrar el modal de olvido de contraseña
+const closeForgotModal = () => {
+  showForgotModal.value = false;
+};
+
+// Validación de email
+const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+
+// Lógica para el reset de contraseña
+const handleForgotPassword = async () => {
+  forgotEmailError.value = "";
+  forgotErrorMessage.value = "";
+
+  if (!forgotEmail.value || !isValidEmail(forgotEmail.value)) {
+    forgotEmailError.value = "Ingresa un correo electrónico válido.";
+    return;
+  }
+
+  forgotLoading.value = true;
+
+  try {
+    const response = await fetch("/api/auth/forgot-password", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: forgotEmail.value }),
+    });
+
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.message || "error");
+    }
+
+    closeForgotModal();
+    showSuccessPopup.value = true;
+    setTimeout(() => (showSuccessPopup.value = false), 4000);
+  } catch {
+    forgotErrorMessage.value = "Ocurrió un error, por favor intenta de nuevo.";
+  } finally {
+    forgotLoading.value = false;
+  }
+};
 </script>
 
 <style scoped>
@@ -104,6 +153,24 @@ header { display: flex; align-items: center; justify-content: space-between; bac
 .login-container p a { color: #0000FF; text-decoration: underline; font-weight: 600; }
 .icon { margin-right: 8px; font-size: 1.2rem; }
 .footer { margin-top: auto; width: 100%; background: #344f59; padding: 1rem; text-align: center; font-size: 0.8rem; color: #ffffff; }
+.forgot-link { display: block; text-align: center; margin-top: 0.75rem; color: #0000FF; text-decoration: underline; font-weight: 600; font-size: 0.9rem; cursor: pointer; }
+ 
+/* Modal */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.modal-container { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); width: 90%; max-width: 400px; position: relative; }
+.modal-container h3 { text-align: center; margin-bottom: 0.5rem; font-weight: 600; font-size: 1.2rem; }
+.modal-subtitle { text-align: center; color: #666; font-size: 0.9rem; margin-bottom: 1rem; }
+.modal-container input { width: 100%; padding: 0.8rem; margin: 0.5rem 0; border: 1px solid #ccc; border-radius: 8px; font-family: 'Montserrat', sans-serif; }
+.modal-close { position: absolute; top: 0.75rem; right: 1rem; background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #666; }
+.modal-close:hover { color: #000; }
+.input-error { border-color: #d32f2f !important; }
+ 
+/* Popup */
+.popup-success { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); background: #344f59; color: #7ff2ec; padding: 0.9rem 1.8rem; border-radius: 8px; font-weight: 600; font-size: 0.95rem; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 1100; animation: fadeInUp 0.3s ease; }
+@keyframes fadeInUp { from { opacity: 0; transform: translateX(-50%) translateY(10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+ 
+.error { color: #d32f2f; background: #fdecea; padding: 10px; border-radius: 6px; font-size: 0.9rem; margin-top: 10px; text-align: center; }
+ 
 @media (max-width: 768px) {
   header { flex-direction: column; padding: 1rem; }
   .header-logo { width: 100%; justify-content: space-between; align-items: center; }
@@ -113,13 +180,9 @@ header { display: flex; align-items: center; justify-content: space-between; bac
   .menu-toggle { display: block; }
 }
 
-.error {
-  color: #d32f2f;
-  background: #fdecea;
-  padding: 10px;
-  border-radius: 6px;
-  font-size: 0.9rem;
-  margin-top: 10px;
-  text-align: center;
+.reset-password-link {
+  color: #007bff;
+  cursor: pointer;
+  text-decoration: underline;
 }
 </style>

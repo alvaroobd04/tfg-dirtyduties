@@ -1,4 +1,4 @@
-import { registerUser, loginUser, refreshAccessToken, deleteRefreshToken  } from "./auth.service.js";
+import { registerUser, loginUser, refreshAccessToken, deleteRefreshToken, getProfileService, updateProfileService, resetPasswordService  } from "./auth.service.js";
 import { AuthError } from '../../erorrs/authError.js';
 
 export async function registerController(req, res, next) 
@@ -22,9 +22,9 @@ export async function loginControlller(req, res, next)
 
         //Refresh Token como cookie httpOnly
         res.cookie('refreshToken', refreshToken, {
-            httpOnly: true,                                   //Para que no se pueda recuperar la cookie desde JavaScript
-            secure: false,   //Si es true el navegador solo envia la cookie por https aunque en desarrollo suele ser false
-            sameSite: 'lax',                             //Evita que el navegador envíe la cookie en todas la peticiones
+            httpOnly: true,                                 //Para que no se pueda recuperar la cookie desde JavaScript
+            secure: false,                                  //Si es true el navegador solo envia la cookie por https aunque en desarrollo suele ser false
+            sameSite: 'lax',                                //Evita que el navegador envíe la cookie en todas la peticiones
             maxAge: 7*24*60*60*1000                         //Cuanto dura la cookie
         })
 
@@ -94,10 +94,53 @@ export async function logoutController(req, res, next)
     }
 }
 
-export async function meController (req, res, next)
+export async function getProfileController(req, res, next) 
 {
+  try {
+    const userId = req.user.userId;
+
+    const user = await getProfileService(userId);
+    console.log(user)
     return res.status(200).json({
-        message: 'Usuario autenticado',
-        user: req.user
+      user
     });
+
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function updateProfileController(req, res, next) 
+{
+  try {
+    const userId = req.user.userId;
+    const { nombre, apellidos, user_apodo, email } = req.body;
+
+    const user = await updateProfileService(userId, {
+      nombre,
+      apellidos,
+      user_apodo,
+      email
+    });
+
+    res.json({ user });
+
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function resetPasswordController(req, res, next) 
+{
+    try {
+        const { token, newPassword } = req.body;
+
+        const result = await resetPasswordService(token, newPassword);
+        
+        return res.status(200).json({
+            message: 'Contraseña actualizada correctamente'
+        });
+    } catch (error) {
+        next(error);
+    }
 }

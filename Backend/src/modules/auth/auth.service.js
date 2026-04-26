@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt';
 import { registerSchema, loginSchema  } from './auth.schema.js';
-import { findUserByEmail, findUserByApodo, createUser, saveRefreshToken, findRefreshTokenByRefreshId, deleteRefreshTokenById } from './auth.repository.js';
+import { findUserByEmail, findUserByApodo, createUser, saveRefreshToken, findRefreshTokenByRefreshId, deleteRefreshTokenById, getUserProfile, updateUserProfile, updateUserPassword } from './auth.repository.js';
 import jwt from 'jsonwebtoken';
 import { env } from '../../config/env.js';
 import { AuthError, ConflictError } from '../../erorrs/authError.js';
@@ -143,4 +143,43 @@ export async function deleteRefreshToken(refreshToken)
     
     return true
 
+}
+
+export async function getProfileService(userId) 
+{
+  const user = await getUserProfile(userId);
+
+  if (!user) {
+    throw new AuthError('Usuario no encontrado');
+  }
+
+  return user;
+}
+
+export async function updateProfileService(userId, data) 
+{
+  return await updateUserProfile(userId, data);
+}
+
+export async function resetPasswordService(token, newPassword) 
+{
+    try {
+        // Verificar el token de reset de contraseña
+        const decoded = jwt.verify(token, env.jwtSecret);
+
+        const user = await findUserByEmail(decoded.email);
+        if (!user) {
+            throw new AuthError('Usuario no encontrado');
+        }
+
+        // Hashear la nueva contraseña
+        const hashedPassword = await bcrypt.hash(newPassword, parseInt(env.saltRounds));
+
+        // Actualizar la contraseña en la base de datos
+        await updateUserPassword(user.user_id, hashedPassword);
+
+        return { message: 'Contraseña actualizada' };
+    } catch (err) {
+        throw new AuthError('Token inválido o expirado');
+    }
 }

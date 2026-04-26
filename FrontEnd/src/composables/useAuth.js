@@ -12,7 +12,8 @@ export const useAuthStore = defineStore("auth", {
     /* =========================
        LOGIN
     ========================= */
-async login(email, password) {
+async login(email, password) 
+{
   try {
     const res = await api.post("/auth/login", { email, password });
 
@@ -32,11 +33,12 @@ async login(email, password) {
     /* =========================
        LOGOUT
     ========================= */
-    async logout() {
+    async logout() 
+    {
       try {
         await api.post("/auth/logout");
       } catch (e) {
-        // da igual si falla
+
       }
 
       this.user = null;
@@ -52,8 +54,26 @@ async login(email, password) {
       const token = localStorage.getItem("accessToken");
       if (token) {
         this.accessToken = token;
+        this.loadProfile();
       }
-      this.isReady = true; // 🔥 IMPORTANTE
+      this.isReady = true; // IMPORTANTE
+    },
+
+    /* =========================
+       PROFILE
+    ========================= */
+    async loadProfile() 
+    {
+      try {
+        const res = await api.get('/auth/profile');
+        this.user = res.data.user;
+
+      } catch (error) {
+        console.error("Error cargando perfil");
+      }
     },
   },
+
+
 });
+

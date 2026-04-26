@@ -1,7 +1,8 @@
 import { createTaskSchema } from "./task.schema.js";
-import { createTask, getTasksByHouseId, createExecutions, deleteFutureExecutions, getMonthExecutions, completeExecution, getUsersByHouseId, deleteTaskById, updateTaskById, getExecutionById, updateExecutionValidation, createPunishmentExecution, getMyExecutions } from "./task.repository.js";
+import { createTask, getTasksByHouseId, createExecutions, deleteFutureExecutions, getMonthExecutions, completeExecution, getUsersByHouseId, deleteTaskById, updateTaskById, getExecutionById, updateExecutionValidation, createPunishmentExecution, getMyExecutions, getPendingTasksBefore, markExecutionAsFailed } from "./task.repository.js";
 import { NotFoundError } from "../../erorrs/authError.js";
 import { validateTaskWithAI } from './ai.validation.service.js';
+import cron from 'node-cron';
 
 function generateMonthlyDates(periodicidad, from)
 {
@@ -221,14 +222,12 @@ export async function validateExecutionService(executionId, file, taskName, user
   // Si hay buen grado de confianza --> seguimos
   await updateExecutionValidation(executionId, valid, confidence);
 
-  //Si esta segura y esta mal --> castigo
-  if (!valid) {
+  if(!valid)
     await createPunishmentExecution({
-      tarea_id: execution.tarea_id,
-      usuario_id: execution.usuario_id,
-      fecha: execution.fecha
-    });
-  }
+    tarea_id: task.tarea_id,
+    usuario_id: task.usuario_id,
+    fecha: new Date().toISOString().split('T')[0]
+  });
 
   return {
     status: 'done',
@@ -240,4 +239,29 @@ export async function validateExecutionService(executionId, file, taskName, user
 export async function getMyExecutionsService(userId, houseId)
 {
   return await getMyExecutions(userId, houseId)
+}
+
+cron.schedule('1 0 * * *', async () => {
+    await processOverdueTasks();
+});
+
+export async function processOverdueTasks()
+{
+    const now = new Date();
+    const overdueTasks = await getPendingTasksBefore(now);
+
+    for(const task of overdueTasks)
+        await handleTaskFailure();
+}
+
+async function handleTaskFailure(task)
+{
+    await markExecutionsAsFailed(task.id);
+
+    await createPunishmentExecution({
+    tarea_id: task.tarea_id,
+    usuario_id: task.usuario_id,
+    fecha: new Date().toISOString().split('T')[0]
+  });
+
 }
