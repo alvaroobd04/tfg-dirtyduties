@@ -17,7 +17,7 @@
     <span>Nombre</span>
     <span>Dificultad</span>
     <span>Periodicidad</span>
-    <span></span> <!-- acciones -->
+    <span></span>
   </div>
 
       <!-- FILAS -->
@@ -115,14 +115,14 @@
 </template>
 
 <script setup>
-import { ref, watch, onMounted} from "vue"
+import { ref, onMounted } from "vue"
 import api from "@/services/api.js"
 
 const props = defineProps({
   house: Object
 })
 
-const nombre = ref("")
+const nombre = ref(props.house?.nombre || props.house?.name || "")
 const tasks = ref([])
 const users = ref([])
 const newTask = ref("")
@@ -134,25 +134,9 @@ const editDificultad = ref("")
 const editPeriodicidad = ref("")
 const showToast = ref(false)
 const toastMessage = ref("")
-const toastType = ref("success") // success | delete | edit
+const toastType = ref("success")
 
-const emit = defineEmits(["close", "task-created", "task-deleted"])
-
-watch(() => props.house[0]?.id, (val) => {
-  if (!val) return
-
-  nombre.value = val.nombre
-  tasks.value = val.tasks || []
-  users.value = val.users || []
-}, { immediate: true })
-
-watch(() => props.house[0]?.id, (val) => {
-  if (!val) return
-
-  nombre.value = val.nombre
-  tasks.value = val.tasks || []
-  users.value = val.users || []
-}, { immediate: true })
+const emit = defineEmits(["close", "task-created", "task-deleted", "house-updated"])
 
 onMounted(() => {
   loadHouseDetails()
@@ -166,8 +150,8 @@ const addTask = async () => {
   }
 
   try {
-    const res = await api.post(
-      `/houses/${props.house[0].id}/tasks`,
+    await api.post(
+      `/houses/${props.house.id}/tasks`,
       {
         nombre: newTask.value,
         dificultad: Number(newDifficulty.value),
@@ -176,12 +160,9 @@ const addTask = async () => {
     )
 
     triggerToast("Tarea añadida correctamente", "success")
-
     await loadHouseDetails()
-
     emit("task-created")
 
-    // reset
     newTask.value = ""
     newDifficulty.value = ""
     newPeriodicity.value = ""
@@ -193,17 +174,13 @@ const addTask = async () => {
 }
 
 const deleteTask = async (task) => {
-  if (!props.house[0]?.id || !task?.id) return
-
+  if (!props.house?.id || !task?.id) return
   if (!confirm("¿Eliminar esta tarea?")) return
 
   try {
-    await api.delete(`/houses/${props.house[0].id}/tasks/${task.id}`)
-
+    await api.delete(`/houses/${props.house.id}/tasks/${task.id}`)
     triggerToast("Tarea eliminada", "delete")
-
     await loadHouseDetails()
-
     emit("task-deleted")
 
   } catch (err) {
@@ -214,7 +191,6 @@ const deleteTask = async (task) => {
 
 const startEditTask = (task) => {
   editingTaskId.value = task.id
-
   editNombre.value = task.nombre
   editDificultad.value = task.dificultad
   editPeriodicidad.value = task.periodicidad
@@ -225,7 +201,7 @@ const saveTask = async (task) => {
 
   try {
     await api.put(
-      `/houses/${props.house[0].id}/tasks/${task.id}`,
+      `/houses/${props.house.id}/tasks/${task.id}`,
       {
         nombre: editNombre.value,
         dificultad: Number(editDificultad.value),
@@ -234,11 +210,8 @@ const saveTask = async (task) => {
     )
 
     triggerToast("Tarea actualizada", "edit")
-
     await loadHouseDetails()
-
     emit("task-created")
-
     editingTaskId.value = null
 
   } catch (err) {
@@ -246,12 +219,12 @@ const saveTask = async (task) => {
     alert("Error al editar tarea")
   }
 }
+
 const loadHouseDetails = async () => {
-  if (!props.house[0]?.id) return
+  if (!props.house?.id) return
 
   try {
-    const res = await api.get(`/houses/${props.house[0].id}/details`)
-
+    const res = await api.get(`/houses/${props.house.id}/details`)
     const house = res.data
 
     tasks.value = house.tasks || []
@@ -274,18 +247,17 @@ const triggerToast = (message, type = "success") => {
 
 const saveHouseName = async () => {
   if (!nombre.value.trim()) return
-  if (!props.house?.[0]?.id) return
+  if (!props.house?.id) return
 
   try {
-    await api.put(`/houses/${props.house[0].id}`, {
+    await api.put(`/houses/${props.house.id}`, {
       nombre: nombre.value
     })
 
     triggerToast("Nombre actualizado", "edit")
 
-    // avisar al padre
     emit("house-updated", {
-      id: props.house[0].id,
+      id: props.house.id,
       nombre: nombre.value
     })
 
@@ -445,7 +417,7 @@ const saveHouseName = async () => {
 
 
 .toast.success {
-  background: #4A6775; 
+  background: #4A6775;
 }
 
 .toast.delete {
@@ -462,7 +434,5 @@ const saveHouseName = async () => {
   90% { opacity: 1; }
   100% { opacity: 0; transform: translate(-50%, calc(-50% + 10px)); }
 }
-
-
 
 </style>

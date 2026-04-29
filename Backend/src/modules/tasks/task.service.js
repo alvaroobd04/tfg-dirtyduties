@@ -1,7 +1,9 @@
 import { createTaskSchema } from "./task.schema.js";
-import { createTask, getTasksByHouseId, createExecutions, deleteFutureExecutions, getMonthExecutions, completeExecution, getUsersByHouseId, deleteTaskById, updateTaskById, getExecutionById, updateExecutionValidation, createPunishmentExecution, getMyExecutions, getPendingTasksBefore, markExecutionAsFailed } from "./task.repository.js";
-import { NotFoundError } from "../../erorrs/authError.js";
+import { createTask, getTasksByHouseId, createExecutions, deleteFutureExecutions, getMonthExecutions, completeExecution, getUsersByHouseId, deleteTaskById, updateTaskById, getExecutionById, updateExecutionValidation, createPunishmentExecution, getMyExecutions, getPendingTasksBefore, markExecutionAsFailed, getHouseStats } from "./task.repository.js";
+import { NotFoundError, ForbiddenError } from "../../erorrs/authError.js";
 import { validateTaskWithAI } from './ai.validation.service.js';
+import { notifyUser, sendDailyReminders } from '../notifications/notifications.service.js';
+import { getActiveVacationsForHouse } from '../vacations/vacations.repository.js';
 import cron from 'node-cron';
 
 function generateMonthlyDates(periodicidad, from)
@@ -60,34 +62,43 @@ function buildRawExecutions(tasks, from)
     });
 }
 
-function assignUsers(executions, userIds)
-{
-    const userLoad = {};
-    userIds.forEach(id => userLoad[id] = 0);
+function toDateStr(val) {
+    if (typeof val === 'string') return val.slice(0, 10);
+    if (val instanceof Date) return val.toLocaleDateString('en-CA');
+    return String(val).slice(0, 10);
+}
+
+function isOnVacation(userId, fecha, vacations) {
+    return vacations.some(v =>
+        v.usuario_id === userId &&
+        fecha >= toDateStr(v.fecha_inicio) &&
+        fecha <= toDateStr(v.fecha_fin)
+    );
+}
+
+function assignUsers(executions, userIds, vacations = []) {
+    // FIFO priority queue: el usuario con menos carga acumulada siempre está primero
+    const queue = userIds.map(id => ({ id, load: 0 }));
 
     return executions.map(exec => {
+        // excluir usuarios de vacaciones en esta fecha concreta
+        const available = queue.filter(u => !isOnVacation(u.id, exec.fecha, vacations));
+        const pool = available.length > 0 ? available : queue; // fallback si todos están de vacaciones
 
-        const user = userIds.reduce((minUser, currentUser) => {
-            return userLoad[currentUser] < userLoad[minUser]
-                ? currentUser
-                : minUser;
-        });
-
-        userLoad[user] += exec.dificultad;
-
-        return {
-            ...exec,
-            usuario_id: user
-        };
+        const user = pool[0];
+        user.load += exec.dificultad;
+        queue.sort((a, b) => a.load - b.load);
+        return { ...exec, usuario_id: user.id };
     });
 }
 
 //Planifica todas las tareas de la casa desde la fecha de FROM hasta final de mes
 export async function plantMonth(houseId, from)
 {
-    const [ users, tasks ] = await Promise.all([
+    const [ users, tasks, vacations ] = await Promise.all([
         getUsersByHouseId(houseId),
         getTasksByHouseId(houseId),
+        getActiveVacationsForHouse(houseId),
     ]);
     if(!users.length || !tasks.length)
         return;
@@ -97,14 +108,13 @@ export async function plantMonth(houseId, from)
 
     // 2 ordenar por fecha
     rawExecutions.sort((a,b) => {
-    if(a.fecha !== b.fecha)
-        return new Date(a.fecha) - new Date(b.fecha);
-
+        if(a.fecha !== b.fecha)
+            return new Date(a.fecha) - new Date(b.fecha);
         return b.dificultad - a.dificultad;
     });
 
-    // 3 repartir usuarios globalmente
-    const allExecutions = assignUsers(rawExecutions, users);
+    // 3 repartir usuarios respetando vacaciones activas
+    const allExecutions = assignUsers(rawExecutions, users, vacations);
 
     await createExecutions(allExecutions);
 }
@@ -191,11 +201,11 @@ export async function validateExecutionService(executionId, file, taskName, user
 {
   const execution = await getExecutionById(executionId);
 
-    if (execution.usuario_id !== userId)
-        throw new ForbiddenError('No puedes validar esta tarea');
-
     if (!execution)
         throw new NotFoundError('Ejecucion no encontrada');
+
+    if (execution.usuario_id !== userId)
+        throw new ForbiddenError('No puedes validar esta tarea');
 
     const now = new Date();
     const executionDate = new Date(execution.fecha);
@@ -222,12 +232,19 @@ export async function validateExecutionService(executionId, file, taskName, user
   // Si hay buen grado de confianza --> seguimos
   await updateExecutionValidation(executionId, valid, confidence);
 
-  if(!valid)
+  if(!valid) {
     await createPunishmentExecution({
-    tarea_id: task.tarea_id,
-    usuario_id: task.usuario_id,
-    fecha: new Date().toISOString().split('T')[0]
-  });
+      tarea_id: execution.tarea_id,
+      usuario_id: execution.usuario_id,
+      fecha: new Date().toLocaleDateString('en-CA')
+    });
+    await notifyUser(
+      execution.usuario_id,
+      'castigo',
+      `${execution.userName}, "${taskName}" no fue validada correctamente. Se ha añadido un castigo.`,
+      execution.id
+    );
+  }
 
   return {
     status: 'done',
@@ -241,8 +258,24 @@ export async function getMyExecutionsService(userId, houseId)
   return await getMyExecutions(userId, houseId)
 }
 
+export async function getHouseStatsService(houseId) {
+  const rows = await getHouseStats(houseId);
+  return rows.map(r => ({
+    userId:      Number(r.userId),
+    userName:    r.userName,
+    userApodo:   r.userApodo,
+    completadas: Number(r.completadas),
+    fallos:      Number(r.fallos),
+    carga:       Number(r.carga),
+  }));
+}
+
 cron.schedule('1 0 * * *', async () => {
     await processOverdueTasks();
+});
+
+cron.schedule('0 20 * * *', async () => {
+    await sendDailyReminders();
 });
 
 export async function processOverdueTasks()
@@ -251,17 +284,23 @@ export async function processOverdueTasks()
     const overdueTasks = await getPendingTasksBefore(now);
 
     for(const task of overdueTasks)
-        await handleTaskFailure();
+        await handleTaskFailure(task);
 }
 
 async function handleTaskFailure(task)
 {
-    await markExecutionsAsFailed(task.id);
+    await markExecutionAsFailed(task.id);
 
     await createPunishmentExecution({
-    tarea_id: task.tarea_id,
-    usuario_id: task.usuario_id,
-    fecha: new Date().toISOString().split('T')[0]
-  });
+      tarea_id: task.tarea_id,
+      usuario_id: task.usuario_id,
+      fecha: new Date().toLocaleDateString('en-CA')
+    });
 
+    await notifyUser(
+      task.usuario_id,
+      'castigo',
+      `${task.userName}, no completaste "${task.taskName}" a tiempo. Se ha añadido un castigo.`,
+      task.id
+    );
 }

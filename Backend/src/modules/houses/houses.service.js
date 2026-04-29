@@ -5,19 +5,20 @@ import { findHouseByName, createHouse, getHousesByUserId, getHousesById, getMemb
 export async function createNewHouse(data, userId)
 {
     const parsedData = createHouseSchema.parse(data);
-    const { nombre, tasks } = parsedData;
-    
+    const { nombre, tasks, modo } = parsedData;
+
     const existingHouse = await findHouseByName(nombre, userId);
 
     if (existingHouse) {
         throw new ConflictError('Ya tienes una casa con ese nombre');
     }
 
-    const houseId = await createHouseWithTasks( nombre, userId, tasks );
+    const result = await createHouseWithTasks(nombre, userId, tasks ?? [], modo);
 
     return {
-        id: houseId,
-        nombre
+        id: result.id,
+        nombre,
+        modo
     };
 }
 

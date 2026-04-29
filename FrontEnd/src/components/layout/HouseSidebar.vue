@@ -9,7 +9,12 @@
         :class="{ active: house.id === currentHouse?.id }"
         @click="$emit('select-house', house)"
       >
-        <span class="house-name">{{ house.name }}</span>
+        <div class="house-name-row">
+          <span class="house-name">{{ house.name }}</span>
+          <span :class="['mode-badge', house.modo === 'flexible' ? 'badge-flex' : 'badge-strict']">
+            {{ house.modo === 'flexible' ? 'Flexible' : 'Estricto' }}
+          </span>
+        </div>
 
         <div class="actions">
           <button @click.stop="$emit('edit-house', house)">✏️</button>
@@ -32,17 +37,6 @@ const props = defineProps({
 })
 
 
-import { onMounted } from "vue"
-
-onMounted(() => {
-  console.log("SIDEBAR HOUSES:", props.houses)
-})
-
-import { watch } from "vue"
-
-watch(() => props.houses, (newVal) => {
-  console.log("HOUSES UPDATED:", newVal)
-})
 
 defineEmits(['toggle-sidebar', 'select-house', 'create-house', 'edit-house', 'delete-house', 'share-house'])
 </script>
@@ -110,6 +104,32 @@ defineEmits(['toggle-sidebar', 'select-house', 'create-house', 'edit-house', 'de
 
 .house-item.active .house-name {
   color: #000;
+}
+
+.house-name-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.mode-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  width: fit-content;
+}
+
+.badge-strict {
+  background: #f87171;
+  color: white;
+}
+
+.badge-flex {
+  background: #34d399;
+  color: white;
 }
 
 .actions {

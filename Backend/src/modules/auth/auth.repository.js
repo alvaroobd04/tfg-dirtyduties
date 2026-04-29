@@ -6,7 +6,7 @@ export async function findUserByEmail(email)
 {
     try {
         const [ rows ] = await pool.query (
-        'SELECT user_id,user_apodo, email, password_hash from USUARIOS  where email = ? limit 1',
+        'SELECT user_id, user_apodo, email, password_hash, must_change_password FROM USUARIOS WHERE email = ? LIMIT 1',
         [email] //Se evita SQL Inyection
     );
 
@@ -92,12 +92,13 @@ export async function deleteRefreshTokenById(refreshId)
 export async function getUserProfile(userId) 
 {
   const [rows] = await pool.query(
-    `SELECT 
+    `SELECT
         user_id,
         user_apodo,
         nombre,
         apellidos,
-        email
+        email,
+        must_change_password
      FROM USUARIOS
      WHERE user_id = ?`,
     [userId]
@@ -120,7 +121,7 @@ export async function updateUserProfile(userId, data)
   return await getUserProfile(userId);
 }
 
-export async function updateUserPassword(userId, newPasswordHash) 
+export async function updateUserPassword(userId, newPasswordHash)
 {
     try {
         const [result] = await pool.query(
@@ -129,6 +130,31 @@ export async function updateUserPassword(userId, newPasswordHash)
         );
         return result;
     } catch (err) {
-        throw new Error('Error al actualizar la contraseña');
+        throw new ConecctionError('Error al actualizar la contraseña');
+    }
+}
+
+export async function setMustChangePassword(userId, value)
+{
+    try {
+        await pool.query(
+            'UPDATE USUARIOS SET must_change_password = ? WHERE user_id = ?',
+            [value, userId]
+        );
+    } catch (err) {
+        throw new ConecctionError('Error al actualizar must_change_password');
+    }
+}
+
+export async function createUserWithHash({ userApodo, email, nombre, apellidos, passwordHash })
+{
+    try {
+        const [ result ] = await pool.query(
+            'INSERT INTO USUARIOS (user_apodo, email, nombre, apellidos, password_hash) VALUES (?,?,?,?,?)',
+            [userApodo, email, nombre, apellidos, passwordHash]
+        );
+        return result.insertId;
+    } catch(err) {
+        throw new ConecctionError('Error al crear usuario social');
     }
 }

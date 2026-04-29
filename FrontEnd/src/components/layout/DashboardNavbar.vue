@@ -81,7 +81,7 @@ const username = computed(() => {
 const tabs = [
   { key: "mi-casa", label: "Mi casa" },
   { key: "tareas", label: "Mis tareas" },
-  { key: "calendario", label: "Mi calendario" },
+  { key: "calendario", label: "Mis estadísticas" },
   { key: "notificaciones", label: "Mis notificaciones" }
 ];
 

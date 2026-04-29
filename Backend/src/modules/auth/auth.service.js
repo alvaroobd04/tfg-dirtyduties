@@ -1,11 +1,12 @@
 import bcrypt from 'bcrypt';
-import { registerSchema, loginSchema  } from './auth.schema.js';
-import { findUserByEmail, findUserByApodo, createUser, saveRefreshToken, findRefreshTokenByRefreshId, deleteRefreshTokenById, getUserProfile, updateUserProfile, updateUserPassword } from './auth.repository.js';
+import { registerSchema, loginSchema, changePasswordSchema } from './auth.schema.js';
+import { findUserByEmail, findUserByApodo, createUser, saveRefreshToken, findRefreshTokenByRefreshId, deleteRefreshTokenById, getUserProfile, updateUserProfile, updateUserPassword, setMustChangePassword, createUserWithHash } from './auth.repository.js';
 import jwt from 'jsonwebtoken';
 import { env } from '../../config/env.js';
-import { AuthError, ConflictError } from '../../erorrs/authError.js';
-import { _isoDateTime } from 'zod/v4/core';
-import { randomUUID } from 'node:crypto';
+import { AuthError, ConflictError, NotFoundError } from '../../erorrs/authError.js';
+import { randomUUID, randomBytes, createPublicKey } from 'node:crypto';
+import { transporter } from '../../config/mailer.js';
+import axios from 'axios';
 
 export async function registerUser(data)
 {
@@ -66,7 +67,7 @@ export async function loginUser(data)
     );
 
     const refreshToken = await generarRefreshToken(user.user_id)
-    return { accessToken, refreshToken };
+    return { accessToken, refreshToken, mustChangePassword: !!user.must_change_password };
 }
 
 
@@ -161,7 +162,73 @@ export async function updateProfileService(userId, data)
   return await updateUserProfile(userId, data);
 }
 
-export async function resetPasswordService(token, newPassword) 
+function generateTempPassword() {
+  const bytes = randomBytes(9);
+  const upper = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+  const lower = 'abcdefghjkmnpqrstuvwxyz';
+  const digits = '23456789';
+  const special = '!@#$';
+
+  const chars = [
+    upper[bytes[0] % upper.length],
+    upper[bytes[1] % upper.length],
+    lower[bytes[2] % lower.length],
+    lower[bytes[3] % lower.length],
+    lower[bytes[4] % lower.length],
+    digits[bytes[5] % digits.length],
+    digits[bytes[6] % digits.length],
+    special[bytes[7] % special.length],
+    lower[bytes[8] % lower.length],
+  ];
+
+  for (let i = chars.length - 1; i > 0; i--) {
+    const j = bytes[i % bytes.length] % (i + 1);
+    [chars[i], chars[j]] = [chars[j], chars[i]];
+  }
+
+  return chars.join('');
+}
+
+export async function forgotPasswordService(email)
+{
+  const user = await findUserByEmail(email);
+
+  if (!user) return; // no revelar si el email existe
+
+  const tempPassword = generateTempPassword();
+  const hashed = await bcrypt.hash(tempPassword, parseInt(env.saltRounds));
+
+  await updateUserPassword(user.user_id, hashed);
+  await setMustChangePassword(user.user_id, true);
+
+  await transporter.sendMail({
+    from: `"DirtyDuties" <${env.emailUser}>`,
+    to: email,
+    subject: 'Tu contraseña temporal — DirtyDuties',
+    html: `
+      <div style="font-family: sans-serif; max-width: 480px; margin: auto; padding: 24px; border-radius: 10px; border: 1px solid #e2e8f0;">
+        <h2 style="color: #2f4858;">DirtyDuties</h2>
+        <p>Hemos generado una contraseña temporal para tu cuenta:</p>
+        <div style="background:#f1f5f9; padding:16px; border-radius:8px; font-size:22px; font-weight:bold; letter-spacing:2px; text-align:center; color:#1d3557;">
+          ${tempPassword}
+        </div>
+        <p style="margin-top:16px; color:#555;">Inicia sesión con esta contraseña. Al entrar se te pedirá que la cambies.</p>
+        <p style="color:#999; font-size:12px; margin-top:24px;">Si no solicitaste este cambio, ignora este correo.</p>
+      </div>
+    `
+  });
+}
+
+export async function changePasswordService(userId, newPassword)
+{
+  changePasswordSchema.parse({ newPassword });
+
+  const hashed = await bcrypt.hash(newPassword, parseInt(env.saltRounds));
+  await updateUserPassword(userId, hashed);
+  await setMustChangePassword(userId, false);
+}
+
+export async function resetPasswordService(token, newPassword)
 {
     try {
         // Verificar el token de reset de contraseña
@@ -182,4 +249,83 @@ export async function resetPasswordService(token, newPassword)
     } catch (err) {
         throw new AuthError('Token inválido o expirado');
     }
+}
+
+async function findOrCreateSocialUser(email, nombre, apellidos) {
+    const existing = await findUserByEmail(email);
+    if (existing) return existing;
+
+    const base = email.split('@')[0].replace(/[^a-zA-Z0-9_]/g, '').substring(0, 15) || 'user';
+    let apodo = base;
+    let i = 1;
+    while (await findUserByApodo(apodo)) {
+        apodo = `${base}${i++}`;
+    }
+
+    const passwordHash = await bcrypt.hash(randomUUID(), parseInt(env.saltRounds));
+    const userId = await createUserWithHash({
+        userApodo: apodo,
+        email,
+        nombre: nombre || base,
+        apellidos: apellidos || '',
+        passwordHash
+    });
+
+    return { user_id: userId, email, user_apodo: apodo };
+}
+
+export async function googleLoginService(idToken) {
+    let payload;
+    try {
+        const { data } = await axios.get(
+            `https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`
+        );
+        payload = data;
+    } catch {
+        throw new AuthError('Token de Google inválido');
+    }
+
+    const { email, given_name, family_name } = payload;
+    if (!email) throw new AuthError('El token de Google no incluye email');
+
+    if (env.googleClientId && payload.aud !== env.googleClientId)
+        throw new AuthError('Token de Google no corresponde a esta aplicación');
+
+    const user = await findOrCreateSocialUser(email, given_name || '', family_name || '');
+
+    const accessToken = jwt.sign({ userId: user.user_id }, env.jwtSecret, { expiresIn: '15m' });
+    const refreshToken = await generarRefreshToken(user.user_id);
+
+    return { accessToken, refreshToken };
+}
+
+export async function appleLoginService(idToken) {
+    let decoded;
+    try {
+        const { data: { keys } } = await axios.get('https://appleid.apple.com/auth/keys');
+
+        const b64 = idToken.split('.')[0].replace(/-/g, '+').replace(/_/g, '/');
+        const header = JSON.parse(Buffer.from(b64, 'base64').toString());
+        const jwk = keys.find(k => k.kid === header.kid);
+        if (!jwk) throw new Error('JWK no encontrado');
+
+        const publicKey = createPublicKey({ key: jwk, format: 'jwk' });
+
+        const verifyOptions = { algorithms: ['RS256'], issuer: 'https://appleid.apple.com' };
+        if (env.appleClientId) verifyOptions.audience = env.appleClientId;
+
+        decoded = jwt.verify(idToken, publicKey, verifyOptions);
+    } catch {
+        throw new AuthError('Token de Apple inválido');
+    }
+
+    const { email, sub } = decoded;
+    if (!email) throw new AuthError('El token de Apple no incluye email');
+
+    const user = await findOrCreateSocialUser(email, sub || '', '');
+
+    const accessToken = jwt.sign({ userId: user.user_id }, env.jwtSecret, { expiresIn: '15m' });
+    const refreshToken = await generarRefreshToken(user.user_id);
+
+    return { accessToken, refreshToken };
 }

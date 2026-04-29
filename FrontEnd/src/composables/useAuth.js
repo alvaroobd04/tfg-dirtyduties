@@ -5,7 +5,8 @@ export const useAuthStore = defineStore("auth", {
   state: () => ({
     user: null,
     accessToken: null,
-    isReady: false
+    isReady: false,
+    mustChangePassword: false
   }),
 
   actions: {
@@ -18,6 +19,7 @@ async login(email, password)
     const res = await api.post("/auth/login", { email, password });
 
     this.accessToken = res.data.accessToken;
+    this.mustChangePassword = res.data.mustChangePassword ?? false;
     localStorage.setItem("accessToken", this.accessToken);
 
     return { success: true };
@@ -43,6 +45,7 @@ async login(email, password)
 
       this.user = null;
       this.accessToken = null;
+      this.mustChangePassword = false;
 
       localStorage.removeItem("accessToken");
     },
@@ -50,27 +53,34 @@ async login(email, password)
     /* =========================
        INIT (AL RECARGAR)
     ========================= */
-    init() {
+    async init() {
       const token = localStorage.getItem("accessToken");
       if (token) {
         this.accessToken = token;
-        this.loadProfile();
+        await this.loadProfile();
       }
-      this.isReady = true; // IMPORTANTE
+      this.isReady = true;
     },
 
     /* =========================
        PROFILE
     ========================= */
-    async loadProfile() 
+    async loadProfile()
     {
       try {
         const res = await api.get('/auth/profile');
         this.user = res.data.user;
+        this.mustChangePassword = res.data.user.must_change_password ?? false;
 
       } catch (error) {
         console.error("Error cargando perfil");
       }
+    },
+
+    async socialLogin(accessToken) {
+      this.accessToken = accessToken;
+      localStorage.setItem('accessToken', accessToken);
+      await this.loadProfile();
     },
   },
 

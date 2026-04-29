@@ -16,7 +16,8 @@ export const useHouseStore = defineStore("house", {
 
       this.houses = res.data.houses.map(h => ({
         id: h.id,
-        name: h.nombre
+        name: h.nombre,
+        modo: h.modo
       }));
 
       if (!this.currentHouse && this.houses.length > 0) {

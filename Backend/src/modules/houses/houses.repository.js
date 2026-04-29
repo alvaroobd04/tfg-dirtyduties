@@ -53,10 +53,10 @@ export async function getHousesByUserId(userId)
 {
     try {
         const [ rows ] = await pool.query(
-             `SELECT c.id, c.nombre FROM casa c JOIN house_users hu ON hu.house_id = c.id WHERE hu.user_id = ? ORDER BY c.created_at DESC`,
+             `SELECT c.id, c.nombre, c.modo FROM casa c JOIN house_users hu ON hu.house_id = c.id WHERE hu.user_id = ? ORDER BY c.created_at DESC`,
             [userId]
         );
-        
+
         return rows;
     } catch (err) {
         throw new ConecctionError('Error de conexion con la base de datos');
@@ -67,11 +67,11 @@ export async function getHousesById(houseId)
 {
     try {
         const [ rows ] = await pool.query(
-             `SELECT id, nombre, created_at FROM casa where id = ?`,
+             `SELECT id, nombre, modo, created_at FROM casa where id = ?`,
             [houseId]
         );
-        
-        return rows;
+
+        return rows[0] || null;
     } catch (err) {
         throw new ConecctionError('Error de conexion con la base de datos');
     }
@@ -180,7 +180,7 @@ export async function updateHouseNameById(houseId, nombre) {
   return result.affectedRows > 0;
 }
 
-export async function createHouseWithTasks(nombre, userId, tasks) {
+export async function createHouseWithTasks(nombre, userId, tasks, modo = 'estricto') {
   const connection = await pool.getConnection();
 
   try {
@@ -188,8 +188,8 @@ export async function createHouseWithTasks(nombre, userId, tasks) {
 
     // 1. crear casa
     const [houseResult] = await connection.query(
-      'INSERT INTO casa (nombre) VALUES (?)',
-      [nombre]
+      'INSERT INTO casa (nombre, modo) VALUES (?, ?)',
+      [nombre, modo]
     );
 
     const houseId = houseResult.insertId;

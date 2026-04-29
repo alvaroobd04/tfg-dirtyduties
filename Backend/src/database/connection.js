@@ -9,7 +9,8 @@ export const pool = mysql.createPool({
   port: env.dbPort,
   database: env.dbName,
   password: env.dbPassword,
-  waitForConnections: true, //Si las 10 conexiones están ocupadas, la siguiente petición espera
-  connectionLimit: 10,  //Nº de conexiones simultáneas
-  queueLimit: 0         //No hay límite
+  waitForConnections: true,
+  connectionLimit: 10,
+  queueLimit: 0,
+  dateStrings: ['DATE']  // columnas DATE vuelven como string 'YYYY-MM-DD', sin conversión de zona horaria
 });

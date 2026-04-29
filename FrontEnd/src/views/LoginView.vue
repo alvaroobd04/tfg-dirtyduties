@@ -11,11 +11,13 @@
 
     <div class="login-container">
       <h2>Inicia sesión</h2>
-      <input v-model="email" type="email" placeholder="Correo electrónico" />
-      <input v-model="password" type="password" placeholder="Contraseña" />
-      <button type="submit" class="btn-login" v-on:click="handleLogin" :disabled="loading">
-        {{ loading ? "Entrando..." : "Acceder" }}
-      </button>
+      <form @submit.prevent="handleLogin">
+        <input v-model="email" type="email" placeholder="Correo electrónico" autocomplete="email" />
+        <input v-model="password" type="password" placeholder="Contraseña" autocomplete="current-password" />
+        <button type="submit" class="btn-login" :disabled="loading">
+          {{ loading ? "Entrando..." : "Acceder" }}
+        </button>
+      </form>
 
       <p @click="openResetPasswordModal" class="reset-password-link">¿Olvidaste tu contraseña?</p>
       <ResetPasswordModal :isVisible="showResetPasswordModal" @close="closeResetPasswordModal" />
@@ -25,9 +27,12 @@
       <div class="separator">o</div>
 
       <div class="social-login">
-        <button class="btn-social btn-google" @click="goToPrincipal"><span class="icon">G</span>Continuar con Google</button>
-        <button class="btn-social btn-facebook" @click="goToPrincipal"><span class="icon">f</span>Continuar con Facebook</button>
-        <button class="btn-social btn-apple" @click="goToPrincipal"><span class="icon">🍎</span>Continuar con Apple</button>
+        <button class="btn-social btn-google" @click="handleGoogleLogin" :disabled="loading">
+          <span class="icon">G</span>Continuar con Google
+        </button>
+        <button class="btn-social btn-apple" @click="handleAppleLogin" :disabled="loading">
+          <span class="icon">🍎</span>Continuar con Apple
+        </button>
       </div>
 
       <p>¿No tienes cuenta? <RouterLink to="/register">Regístrate</RouterLink></p>
@@ -36,10 +41,13 @@
     <footer class="footer">© 2025 DirtyDuties - Todos los derechos reservados</footer>
   </div>
 </template>
+
 <script setup>
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import { useRouter, useRoute } from "vue-router";
 import { useAuthStore } from "@/composables/useAuth.js";
+import api from "@/services/api.js";
+import ResetPasswordModal from "@/components/layout/ResetPasswordModal.vue";
 
 const router = useRouter();
 const route = useRoute();
@@ -49,18 +57,24 @@ const email = ref("");
 const password = ref("");
 const loading = ref(false);
 const errorMessage = ref("");
+const showResetPasswordModal = ref(false);
 
-const showForgotModal = ref(false); // Variable reactiva para mostrar el modal de reset
-const forgotEmail = ref("");
-const forgotEmailError = ref("");
-const forgotErrorMessage = ref("");
-const forgotLoading = ref(false);
-const showSuccessPopup = ref(false);
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+const APPLE_CLIENT_ID = import.meta.env.VITE_APPLE_CLIENT_ID;
 
-// Lógica de Login
+onMounted(() => {
+  if (window.AppleID && APPLE_CLIENT_ID) {
+    window.AppleID.auth.init({
+      clientId: APPLE_CLIENT_ID,
+      scope: 'name email',
+      redirectURI: window.location.origin + '/login',
+      usePopup: true
+    });
+  }
+});
+
 const handleLogin = async () => {
   if (loading.value) return;
-
   loading.value = true;
   errorMessage.value = "";
 
@@ -73,60 +87,76 @@ const handleLogin = async () => {
   }
 
   const redirect = route.query.redirect;
+  router.push(redirect || "/principal");
+};
 
-  if (redirect) {
-    router.push(redirect);
-  } else {
-    router.push("/principal");
+const handleGoogleLogin = () => {
+  if (!window.google) {
+    errorMessage.value = 'Google no disponible, recarga la página e inténtalo de nuevo';
+    return;
   }
-};
-
-// Función para abrir el modal de olvido de contraseña
-const openForgotPasswordModal = () => {
-  showForgotModal.value = true;
-};
-
-// Función para cerrar el modal de olvido de contraseña
-const closeForgotModal = () => {
-  showForgotModal.value = false;
-};
-
-// Validación de email
-const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-
-// Lógica para el reset de contraseña
-const handleForgotPassword = async () => {
-  forgotEmailError.value = "";
-  forgotErrorMessage.value = "";
-
-  if (!forgotEmail.value || !isValidEmail(forgotEmail.value)) {
-    forgotEmailError.value = "Ingresa un correo electrónico válido.";
+  if (!GOOGLE_CLIENT_ID) {
+    errorMessage.value = 'Login con Google no configurado';
     return;
   }
 
-  forgotLoading.value = true;
+  errorMessage.value = "";
+
+  window.google.accounts.id.initialize({
+    client_id: GOOGLE_CLIENT_ID,
+    callback: async (response) => {
+      try {
+        loading.value = true;
+        const res = await api.post('/auth/google', { idToken: response.credential });
+        await auth.socialLogin(res.data.accessToken);
+        router.push(route.query.redirect || '/principal');
+      } catch (err) {
+        errorMessage.value = err.response?.data?.message || 'Error al iniciar sesión con Google';
+        loading.value = false;
+      }
+    }
+  });
+
+  window.google.accounts.id.prompt((notification) => {
+    if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+      window.google.accounts.id.renderButton(
+        document.getElementById('google-btn-fallback'),
+        { theme: 'outline', size: 'large', width: '100%' }
+      );
+    }
+  });
+};
+
+const handleAppleLogin = async () => {
+  if (!window.AppleID) {
+    errorMessage.value = 'Apple Sign In no disponible, recarga la página';
+    return;
+  }
+  if (!APPLE_CLIENT_ID) {
+    errorMessage.value = 'Login con Apple no configurado';
+    return;
+  }
 
   try {
-    const response = await fetch("/api/auth/forgot-password", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: forgotEmail.value }),
-    });
+    loading.value = true;
+    errorMessage.value = "";
 
-    if (!response.ok) {
-      const data = await response.json().catch(() => ({}));
-      throw new Error(data.message || "error");
+    const response = await window.AppleID.auth.signIn();
+    const idToken = response.authorization.id_token;
+
+    const res = await api.post('/auth/apple', { idToken });
+    await auth.socialLogin(res.data.accessToken);
+    router.push(route.query.redirect || '/principal');
+  } catch (err) {
+    if (err.error !== 'popup_closed_by_user') {
+      errorMessage.value = err.response?.data?.message || 'Error al iniciar sesión con Apple';
     }
-
-    closeForgotModal();
-    showSuccessPopup.value = true;
-    setTimeout(() => (showSuccessPopup.value = false), 4000);
-  } catch {
-    forgotErrorMessage.value = "Ocurrió un error, por favor intenta de nuevo.";
-  } finally {
-    forgotLoading.value = false;
+    loading.value = false;
   }
 };
+
+const openResetPasswordModal = () => { showResetPasswordModal.value = true; };
+const closeResetPasswordModal = () => { showResetPasswordModal.value = false; };
 </script>
 
 <style scoped>
@@ -138,9 +168,11 @@ header { display: flex; align-items: center; justify-content: space-between; bac
 .header-title { font-family: 'Bebas Neue', sans-serif; font-size: 4rem; letter-spacing: 2px; color: #ffffff; }
 .btn-nav, .btn-login, .btn-social { background: #7ff2ec; padding: 0.75rem 1.5rem; border: none; border-radius: 4px; text-decoration: none; color: #000000; font-weight: 600; font-size: 1rem; transition: background 0.2s ease; cursor: pointer; text-transform: uppercase; }
 .btn-nav:hover, .btn-login:hover, .btn-social:hover { background: #5ab8b2; }
+.btn-nav:hover, .btn-login:disabled, .btn-social:disabled { opacity: 0.6; cursor: not-allowed; }
 .menu-toggle { display: none; font-size: 1.5rem; color: #ffffff; background: none; border: none; cursor: pointer; }
 .login-container { margin-top: 3rem; margin-bottom: 2rem; background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 90%; max-width: 400px; }
 .login-container h2 { text-align: center; margin-bottom: 1.5rem; font-weight: 600; }
+.login-container form { display: flex; flex-direction: column; }
 .login-container input { width: 100%; padding: 0.8rem; margin: 0.5rem 0; border: 1px solid #ccc; border-radius: 8px; font-family: 'Montserrat', sans-serif; }
 .btn-login { display: block; width: 100%; margin-top: 1rem; }
 .separator { display: flex; align-items: center; text-align: center; margin: 1.5rem 0; color: #777; }
@@ -153,24 +185,9 @@ header { display: flex; align-items: center; justify-content: space-between; bac
 .login-container p a { color: #0000FF; text-decoration: underline; font-weight: 600; }
 .icon { margin-right: 8px; font-size: 1.2rem; }
 .footer { margin-top: auto; width: 100%; background: #344f59; padding: 1rem; text-align: center; font-size: 0.8rem; color: #ffffff; }
-.forgot-link { display: block; text-align: center; margin-top: 0.75rem; color: #0000FF; text-decoration: underline; font-weight: 600; font-size: 0.9rem; cursor: pointer; }
- 
-/* Modal */
-.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
-.modal-container { background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.2); width: 90%; max-width: 400px; position: relative; }
-.modal-container h3 { text-align: center; margin-bottom: 0.5rem; font-weight: 600; font-size: 1.2rem; }
-.modal-subtitle { text-align: center; color: #666; font-size: 0.9rem; margin-bottom: 1rem; }
-.modal-container input { width: 100%; padding: 0.8rem; margin: 0.5rem 0; border: 1px solid #ccc; border-radius: 8px; font-family: 'Montserrat', sans-serif; }
-.modal-close { position: absolute; top: 0.75rem; right: 1rem; background: none; border: none; font-size: 1.2rem; cursor: pointer; color: #666; }
-.modal-close:hover { color: #000; }
-.input-error { border-color: #d32f2f !important; }
- 
-/* Popup */
-.popup-success { position: fixed; bottom: 2rem; left: 50%; transform: translateX(-50%); background: #344f59; color: #7ff2ec; padding: 0.9rem 1.8rem; border-radius: 8px; font-weight: 600; font-size: 0.95rem; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 1100; animation: fadeInUp 0.3s ease; }
-@keyframes fadeInUp { from { opacity: 0; transform: translateX(-50%) translateY(10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
- 
+
 .error { color: #d32f2f; background: #fdecea; padding: 10px; border-radius: 6px; font-size: 0.9rem; margin-top: 10px; text-align: center; }
- 
+
 @media (max-width: 768px) {
   header { flex-direction: column; padding: 1rem; }
   .header-logo { width: 100%; justify-content: space-between; align-items: center; }

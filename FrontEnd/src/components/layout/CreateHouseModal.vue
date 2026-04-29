@@ -56,6 +56,21 @@
         </div>
       </div>
 
+      <!-- MODO DE LA CASA -->
+      <div class="section">
+        <label>Modo de la casa</label>
+        <select v-model="modo" class="modo-select">
+          <option value="estricto">Modo estricto</option>
+          <option value="flexible">Modo flexible</option>
+        </select>
+        <p class="modo-desc" v-if="modo === 'estricto'">
+          <strong>Modo estricto:</strong> si una tarea no se completa antes de su fecha límite, el sistema genera automáticamente una tarea de castigo para el responsable.
+        </p>
+        <p class="modo-desc" v-else>
+          <strong>Modo flexible:</strong> los miembros pueden proponer intercambios de tareas entre sí (hasta el día antes de la fecha límite). Si el intercambio no se acepta o la tarea sigue sin hacerse, se aplica el castigo igualmente.
+        </p>
+      </div>
+
       <!-- BOTONES -->
       <div class="actions">
         <button class="btn-cancel" @click="$emit('close')">
@@ -82,6 +97,7 @@ import api from "@/services/api";
 const emit = defineEmits(["close", "created"]);
 
 const nombreCasa = ref("");
+const modo = ref("estricto");
 
 const taskNombre = ref("");
 const newDifficulty = ref("");
@@ -116,6 +132,7 @@ const handleCreate = async () => {
     // 1. Crear casa
     const res = await api.post("/houses/create", {
       nombre: nombreCasa.value,
+      modo: modo.value,
       tasks: tasks.value
     });
 
@@ -203,6 +220,25 @@ const handleCreate = async () => {
 
 .btn-cancel {
   background: #ccc;
+}
+
+.modo-select {
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  font-size: 14px;
+  margin-top: 6px;
+}
+
+.modo-desc {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #555;
+  background: #f4f6f8;
+  padding: 10px 12px;
+  border-radius: 8px;
+  line-height: 1.5;
 }
 
 .error {

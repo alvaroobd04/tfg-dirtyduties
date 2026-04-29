@@ -52,7 +52,7 @@ export async function createExecutions(executions)
         if(!executions || executions.length === 0)
             return;
         
-        const values = executions.map(e => [e.tarea_id, e.usuario_id, e.fecha, e.estado]);
+        const values = executions.map(e => [e.tarea_id, e.usuario_id, e.fecha, e.estado, e.tipo ?? null]);
 
         await pool.query(
             'INSERT INTO ejecucion (tarea_id, usuario_id, fecha, estado, tipo) VALUES ?',
@@ -66,9 +66,9 @@ export async function createExecutions(executions)
 export async function deleteFutureExecutions(houseId)
 {
     try {
-        const today = new Date().toISOString().split('T')[0];
+        const today = new Date().toLocaleDateString('en-CA');
         const now = new Date();
-        const firstDayNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1).toISOString().split('T')[0];
+        const firstDayNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1).toLocaleDateString('en-CA');
 
         await pool.query(
             'DELETE e FROM ejecucion e INNER JOIN tarea t ON e.tarea_id = t.id WHERE t.casa_id = ? AND e.fecha >= ? AND e.fecha < ?',
@@ -89,7 +89,7 @@ export async function getMonthExecutions(houseId) {
             .toISOString().split('T')[0];
  
         const [rows] = await pool.query(
-            `SELECT e.id, e.fecha, t.nombre AS taskName, u.nombre AS usuario, e.estado
+            `SELECT e.id, e.fecha, t.nombre AS taskName, u.nombre AS usuario, e.estado, e.tipo
              FROM ejecucion e
              INNER JOIN tarea t ON e.tarea_id = t.id
              INNER JOIN usuarios u ON u.user_id = e.usuario_id
@@ -140,11 +140,11 @@ export async function updateTaskById(houseId, taskId, data)
   return result.affectedRows > 0;
 }
 
-export async function updateExecutionValidation(executionId, result) 
+export async function updateExecutionValidation(executionId, result, confidence)
 {
   await pool.query(
-    `UPDATE ejecucion 
-     SET validation_result = ?, 
+    `UPDATE ejecucion
+     SET validation_result = ?,
          validated_at = NOW(),
          estado = ?
      WHERE id = ?`,
@@ -152,10 +152,13 @@ export async function updateExecutionValidation(executionId, result)
   );
 }
 
-export async function getExecutionById(executionId) 
+export async function getExecutionById(executionId)
 {
   const [rows] = await pool.query(
-    `SELECT * FROM ejecucion WHERE id = ?`,
+    `SELECT e.*, u.nombre AS userName
+     FROM ejecucion e
+     JOIN usuarios u ON u.user_id = e.usuario_id
+     WHERE e.id = ?`,
     [executionId]
   );
 
@@ -173,7 +176,7 @@ export async function createPunishmentExecution(execution)
 
 export async function getMyExecutions(userId, houseId)
 {
-  const today = new Date().toISOString().split('T')[0]
+  const today = new Date().toLocaleDateString('en-CA')
 
   const [rows] = await pool.query(`
     SELECT e.id, e.fecha, t.nombre AS taskName, e.estado, e.validation_result, e.tipo
@@ -188,16 +191,21 @@ export async function getMyExecutions(userId, houseId)
   return rows
 }
 
-export async function getPendingTasksBefore(date) 
+export async function getPendingTasksBefore(date)
 {
   try {
-    const formattedDate = date.toISOString().split('T')[0];
+    const yesterday = new Date(date);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const formattedDate = yesterday.toLocaleDateString('en-CA');
 
     const [rows] = await pool.query(`
-      SELECT e.*
+      SELECT e.*, t.nombre AS taskName, u.nombre AS userName
       FROM ejecucion e
+      JOIN tarea t ON e.tarea_id = t.id
+      JOIN usuarios u ON u.user_id = e.usuario_id
       WHERE e.estado = 'pendiente'
-        AND e.fecha < ?
+        AND e.fecha = ?
+        AND (e.tipo IS NULL OR e.tipo != 'castigo')
     `, [formattedDate]);
 
     return rows;
@@ -206,10 +214,43 @@ export async function getPendingTasksBefore(date)
   }
 }
 
-export async function markExecutionAsFailed(executionId) 
+export async function getHouseStats(houseId) {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const firstDay = `${year}-${month}-01`;
+  const firstDayNextMonth = new Date(year, now.getMonth() + 1, 1)
+    .toISOString().split('T')[0];
+
+  const [rows] = await pool.query(
+    `SELECT
+       u.user_id                                                                     AS userId,
+       u.nombre                                                                      AS userName,
+       u.user_apodo                                                                  AS userApodo,
+       COUNT(CASE WHEN e.estado = 'completada'
+                   AND (e.tipo IS NULL OR e.tipo != 'castigo') THEN 1 END)           AS completadas,
+       COUNT(CASE WHEN e.tipo  = 'castigo'                    THEN 1 END)           AS fallos,
+       COALESCE(SUM(CASE WHEN (e.tipo IS NULL OR e.tipo != 'castigo')
+                         THEN t.dificultad ELSE 0 END), 0)                          AS carga
+     FROM house_users hu
+     JOIN usuarios u ON u.user_id = hu.user_id
+     LEFT JOIN ejecucion e
+       ON  e.usuario_id = u.user_id
+       AND e.fecha >= ? AND e.fecha < ?
+     LEFT JOIN tarea t
+       ON  t.id = e.tarea_id AND t.casa_id = ?
+     WHERE hu.house_id = ?
+     GROUP BY u.user_id, u.nombre, u.user_apodo
+     ORDER BY completadas DESC, fallos ASC`,
+    [firstDay, firstDayNextMonth, houseId, houseId]
+  );
+  return rows;
+}
+
+export async function markExecutionAsFailed(executionId)
 {
   await pool.query(
-    `UPDATE ejecucion 
+    `UPDATE ejecucion
      SET estado = 'fallida'
      WHERE id = ?`,
     [executionId]

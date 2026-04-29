@@ -1,4 +1,4 @@
-import { registerUser, loginUser, refreshAccessToken, deleteRefreshToken, getProfileService, updateProfileService, resetPasswordService  } from "./auth.service.js";
+import { registerUser, loginUser, refreshAccessToken, deleteRefreshToken, getProfileService, updateProfileService, resetPasswordService, forgotPasswordService, changePasswordService, googleLoginService, appleLoginService } from "./auth.service.js";
 import { AuthError } from '../../erorrs/authError.js';
 
 export async function registerController(req, res, next) 
@@ -18,7 +18,7 @@ export async function registerController(req, res, next)
 export async function loginControlller(req, res, next)
 {
     try{
-        const { accessToken, refreshToken } = await loginUser(req.body); 
+        const { accessToken, refreshToken, mustChangePassword } = await loginUser(req.body); 
 
         //Refresh Token como cookie httpOnly
         res.cookie('refreshToken', refreshToken, {
@@ -30,8 +30,9 @@ export async function loginControlller(req, res, next)
 
         return res.status(200).json({
             message: 'Login correcto',
-            accessToken, 
-            refreshToken
+            accessToken,
+            refreshToken,
+            mustChangePassword
         });
     } catch (error){
         next(error)
@@ -130,16 +131,79 @@ export async function updateProfileController(req, res, next)
   }
 }
 
-export async function resetPasswordController(req, res, next) 
+export async function forgotPasswordController(req, res, next)
+{
+  try {
+    const { email } = req.body;
+    await forgotPasswordService(email);
+    return res.status(200).json({ message: 'Si el correo existe, recibirás la contraseña temporal.' });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function changePasswordController(req, res, next)
+{
+  try {
+    const userId = req.user.userId;
+    const { newPassword } = req.body;
+    await changePasswordService(userId, newPassword);
+    return res.status(200).json({ message: 'Contraseña actualizada correctamente.' });
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function resetPasswordController(req, res, next)
 {
     try {
         const { token, newPassword } = req.body;
 
         const result = await resetPasswordService(token, newPassword);
-        
+
         return res.status(200).json({
             message: 'Contraseña actualizada correctamente'
         });
+    } catch (error) {
+        next(error);
+    }
+}
+
+export async function googleLoginController(req, res, next) {
+    try {
+        const { idToken } = req.body;
+        if (!idToken) return res.status(400).json({ message: 'idToken requerido' });
+
+        const { accessToken, refreshToken } = await googleLoginService(idToken);
+
+        res.cookie('refreshToken', refreshToken, {
+            httpOnly: true,
+            secure: false,
+            sameSite: 'lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
+        return res.status(200).json({ message: 'Login con Google correcto', accessToken });
+    } catch (error) {
+        next(error);
+    }
+}
+
+export async function appleLoginController(req, res, next) {
+    try {
+        const { idToken } = req.body;
+        if (!idToken) return res.status(400).json({ message: 'idToken requerido' });
+
+        const { accessToken, refreshToken } = await appleLoginService(idToken);
+
+        res.cookie('refreshToken', refreshToken, {
+            httpOnly: true,
+            secure: false,
+            sameSite: 'lax',
+            maxAge: 7 * 24 * 60 * 60 * 1000
+        });
+
+        return res.status(200).json({ message: 'Login con Apple correcto', accessToken });
     } catch (error) {
         next(error);
     }

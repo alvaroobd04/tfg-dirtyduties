@@ -3,8 +3,7 @@
 
     <DashboardNavbar
         :active-tab="activeTab"
-        :notification-count="notificationCount"
-        username="Tú"
+        :notification-count="notifStore.unreadCount"
         @change-tab="changeTab"
       />
 
@@ -40,7 +39,32 @@
       <!-- MIS TAREAS (EJECUCIONES DEL USUARIO) -->
         <!-- MIS TAREAS (EJECUCIONES DEL USUARIO) -->
       <div v-if="activeTab === 'tareas'" class="card">
-        <h2>Mis tareas pendientes</h2>
+        <div class="tareas-header">
+          <h2>Mis tareas pendientes</h2>
+          <button
+            v-if="currentHouse?.modo === 'flexible' && !activeVacation"
+            class="btn-declare-vacation"
+            @click="showVacationModal = true"
+          >
+            Declarar vacaciones
+          </button>
+        </div>
+
+        <!-- BANNER VACACIONES ACTIVAS -->
+        <div v-if="activeVacation" class="vacation-banner">
+          <div class="vacation-banner-info">
+            <span class="vacation-icon">🏖</span>
+            <div>
+              <p class="vacation-title">Vacaciones activas</p>
+              <p class="vacation-dates">
+                {{ formatShortDate(activeVacation.fecha_inicio) }} — {{ formatShortDate(activeVacation.fecha_fin) }}
+              </p>
+            </div>
+          </div>
+          <button class="btn-cancel-vacation" @click="handleCancelVacation">
+            Cancelar vacaciones
+          </button>
+        </div>
 
         <div v-if="!calendar || calendar.length === 0">
           ⏳ Cargando tareas...
@@ -59,7 +83,7 @@
             <div class="task-info">
               <span class="task-name">{{ e.taskName }}</span>
               <span class="task-date">
-                {{ new Date(e.fecha).toLocaleDateString('es-ES', {
+                {{ new Date(e.fecha + 'T00:00:00').toLocaleDateString('es-ES', {
                   weekday: 'long',
                   day: 'numeric',
                   month: 'short'
@@ -72,14 +96,22 @@
               hidden
               :ref="setFileInputRef(e.id)"
             />
-            <button
-              v-if="e.estado === 'pendiente'"
-              :disabled="loading"
-              class="btn-validate"
-              @click="openFile(e)"
-            >
-              {{ loading ? 'Validando...' : 'Validar tarea' }}
-            </button>
+            <div v-if="e.estado === 'pendiente'" class="task-buttons">
+              <button
+                :disabled="loading"
+                class="btn-validate"
+                @click="openFile(e)"
+              >
+                {{ loading ? 'Validando...' : 'Validar tarea' }}
+              </button>
+              <button
+                v-if="e.tipo !== 'castigo' && currentHouse?.modo === 'flexible' && daysUntil(e.fecha) >= 1"
+                class="btn-swap"
+                @click="openSwapModal(e)"
+              >
+                Proponer intercambio
+              </button>
+            </div>
 
             <span
               v-else
@@ -93,6 +125,120 @@
           </div>
         </div>
       </div>
+      <!-- ESTADÍSTICAS -->
+      <div v-if="activeTab === 'calendario'" class="card stats-view">
+        <h2 class="stats-title">Mis estadísticas — {{ mesActual }}</h2>
+
+        <div v-if="houseStats.length === 0" class="empty-state">
+          <p>No hay datos para este mes todavía.</p>
+        </div>
+
+        <template v-else>
+          <!-- Tarjetas resumen del usuario actual -->
+          <div v-if="myStats" class="stats-summary">
+            <div class="stat-card">
+              <span class="stat-value">{{ myStats.completadas }}</span>
+              <span class="stat-label">Completadas</span>
+            </div>
+            <div class="stat-card stat-card--highlight">
+              <span class="stat-value">
+                {{ cumplimiento(myStats) !== null ? cumplimiento(myStats) + '%' : '—' }}
+              </span>
+              <span class="stat-label">Cumplimiento</span>
+            </div>
+            <div class="stat-card stat-card--warn">
+              <span class="stat-value">{{ myStats.fallos }}</span>
+              <span class="stat-label">Fallos</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-value">{{ myStats.carga }}</span>
+              <span class="stat-label">Carga asignada</span>
+            </div>
+          </div>
+
+          <!-- Tabla ranking de la casa -->
+          <h3 class="stats-subtitle">Ranking de la casa</h3>
+          <div class="stats-table-wrap">
+            <table class="stats-table">
+              <thead>
+                <tr>
+                  <th>#</th>
+                  <th>Miembro</th>
+                  <th>Completadas</th>
+                  <th>Fallos</th>
+                  <th>% Cumplimiento</th>
+                  <th>Carga asignada</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="(m, i) in houseStats"
+                  :key="m.userId"
+                  :class="{ 'stats-row--me': m.userId === auth.user?.user_id }"
+                >
+                  <td>{{ i + 1 }}</td>
+                  <td>{{ m.userApodo }}</td>
+                  <td>{{ m.completadas }}</td>
+                  <td>{{ m.fallos }}</td>
+                  <td>
+                    <span v-if="cumplimiento(m) !== null">{{ cumplimiento(m) }}%</span>
+                    <span v-else class="stats-na">—</span>
+                  </td>
+                  <td>{{ m.carga }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </template>
+      </div>
+
+      <!-- NOTIFICACIONES -->
+      <div v-if="activeTab === 'notificaciones'" class="card">
+        <div class="notif-header">
+          <h2>Mis notificaciones</h2>
+          <div class="notif-actions">
+            <button
+              v-if="showPushBanner"
+              class="btn-push"
+              @click="requestPush"
+            >
+              🔔 Activar notificaciones push
+            </button>
+            <button
+              v-if="notifStore.unreadCount > 0"
+              class="btn-read-all"
+              @click="notifStore.markAllRead()"
+            >
+              Marcar todo como leído
+            </button>
+          </div>
+        </div>
+
+        <div v-if="notifStore.unreadCount === 0" class="notif-empty">
+          No tienes notificaciones pendientes
+        </div>
+
+        <div v-else class="notif-list">
+          <div
+            v-for="n in notifStore.notifications.filter(n => !n.leida)"
+            :key="n.id"
+            :class="['notif-item', `notif-${n.tipo}`, { 'notif-swap': n.tipo === 'intercambio_propuesta' }]"
+            @click="n.tipo !== 'intercambio_propuesta' && openConfirmRead(n)"
+          >
+            <span class="notif-icon">{{ notifIcon(n.tipo) }}</span>
+            <div class="notif-body">
+              <p class="notif-msg">{{ n.mensaje }}</p>
+              <span class="notif-date">{{ formatDate(n.created_at) }}</span>
+              <div v-if="n.tipo === 'intercambio_propuesta' && n.intercambio_id" class="swap-notif-actions">
+                <button class="btn-swap-accept" @click.stop="handleAcceptSwap(n)">Aceptar</button>
+                <button class="btn-swap-reject" @click.stop="handleRejectSwap(n)">Rechazar</button>
+              </div>
+            </div>
+            <span class="notif-dot" />
+          </div>
+        </div>
+      </div>
+
       <!-- EMPTY STATE -->
       <div v-if="activeTab === 'mi-casa' && houses.length === 0" class="empty-state">
         <h2>No tienes ninguna casa todavía</h2>
@@ -136,7 +282,7 @@
                   <div
                     v-for="(e, i) in day.executions"
                     :key="i"
-                    class="execution"
+                    :class="['execution', { castigo: e.tipo === 'castigo' }]"
                   >
                     {{ e.taskName }} - {{ e.userName }}
                   </div>
@@ -150,6 +296,97 @@
     </main>
     </div>
   </div>
+  <ChangePasswordModal
+    v-if="auth.mustChangePassword"
+    @done="auth.mustChangePassword = false"
+  />
+
+  <!-- MODAL CONFIRMAR LEER NOTIFICACIÓN -->
+  <div v-if="pendingNotif" class="notif-overlay" @click.self="pendingNotif = null">
+    <div class="notif-confirm-modal">
+      <p class="notif-confirm-msg">{{ pendingNotif.mensaje }}</p>
+      <p class="notif-confirm-question">¿Marcar esta notificación como leída?</p>
+      <div class="modal-actions">
+        <button class="btn-cancel" @click="pendingNotif = null">Cancelar</button>
+        <button class="btn-confirm" @click="doMarkRead">Marcar como leída</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DECLARAR VACACIONES -->
+  <div v-if="showVacationModal" class="notif-overlay" @click.self="showVacationModal = false">
+    <div class="vacation-modal">
+      <h3>Declarar vacaciones</h3>
+      <p class="vacation-modal-info">
+        Las tareas asignadas durante ese periodo se redistribuirán entre tus compañeros.
+        Debes declararlas con al menos <strong>14 días de antelación</strong> y el periodo máximo es de <strong>30 días</strong>.
+      </p>
+
+      <div class="vacation-form">
+        <label>Fecha de inicio</label>
+        <input type="date" v-model="vacationStart" :min="minVacationStart" class="vacation-date-input" />
+
+        <label>Fecha de fin</label>
+        <input type="date" v-model="vacationEnd" :min="vacationStart || minVacationStart" class="vacation-date-input" />
+      </div>
+
+      <p v-if="vacationDuration > 30" class="vacation-error">
+        El periodo no puede superar 30 días (actualmente {{ vacationDuration }} días).
+      </p>
+
+      <div class="modal-actions">
+        <button class="btn-cancel" @click="showVacationModal = false">Cancelar</button>
+        <button
+          class="btn-confirm"
+          :disabled="!vacationStart || !vacationEnd || vacationDuration > 30 || vacationSubmitting"
+          @click="submitVacation"
+        >
+          {{ vacationSubmitting ? 'Guardando...' : 'Confirmar vacaciones' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL PROPONER INTERCAMBIO -->
+  <div v-if="showSwapModal" class="notif-overlay" @click.self="closeSwapModal">
+    <div class="swap-modal">
+      <h3>Proponer intercambio</h3>
+      <p class="swap-modal-sub">
+        Tu tarea: <strong>{{ swapSourceExec?.taskName }}</strong>
+        ({{ swapSourceExec ? formatShortDate(swapSourceExec.fecha) : '' }})
+      </p>
+
+      <p class="swap-modal-label">Elige la tarea que quieres a cambio:</p>
+
+      <div v-if="swapLoadingEligible" class="swap-loading">Cargando tareas compatibles...</div>
+      <div v-else-if="eligibleExecutions.length === 0" class="swap-empty">
+        No hay tareas compatibles disponibles en los próximos 7 días.
+      </div>
+      <div v-else class="swap-list">
+        <div
+          v-for="e in eligibleExecutions"
+          :key="e.id"
+          :class="['swap-option', { selected: selectedSwapExec?.id === e.id }]"
+          @click="selectedSwapExec = e"
+        >
+          <span class="swap-task-name">{{ e.taskName }}</span>
+          <span class="swap-task-meta">{{ e.userName }} · {{ formatShortDate(e.fecha) }}</span>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-cancel" @click="closeSwapModal">Cancelar</button>
+        <button
+          class="btn-confirm"
+          :disabled="!selectedSwapExec || swapSubmitting"
+          @click="submitSwap"
+        >
+          {{ swapSubmitting ? 'Enviando...' : 'Proponer intercambio' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
   <div v-if="showToast" class="toast">
     ✅ Código copiado al portapapeles
   </div>
@@ -171,7 +408,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch, computed } from "vue";
+import { ref, onMounted, onUnmounted, watch, computed, toRaw } from "vue";
 import api from "@/services/api";
 import DashboardNavbar from "@/components/layout/DashboardNavbar.vue";
 import { useHouseStore } from "@/stores/houseStore";
@@ -180,15 +417,191 @@ import { groupByDay, generateCalendarGrid } from "@/utils/calendar.js";
 import HouseSidebar from "@/components/layout/HouseSidebar.vue";
 import EditHouseModal from "@/components/layout/EditHouseModal.vue";
 import CreateHouseModal from "@/components/layout/CreateHouseModal.vue";
+import ChangePasswordModal from "@/components/layout/ChangePasswordModal.vue";
 import { useAuthStore } from "@/composables/useAuth.js"
+import { useNotificationsStore } from "@/composables/useNotifications.js"
 
 const store = useHouseStore();
 const auth = useAuthStore();
+const notifStore = useNotificationsStore();
 
 const { houses, currentHouse, tasks, calendar } = storeToRefs(store);
 
 const activeTab = ref("mi-casa");
-const notificationCount = ref(10);
+const showPushBanner = ref(false);
+
+const formatDate = (raw) => {
+  if (!raw) return '';
+  return new Date(raw).toLocaleString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+};
+
+const requestPush = async () => {
+  const ok = await notifStore.subscribeToPush();
+  if (ok) showPushBanner.value = false;
+};
+const pendingNotif = ref(null);
+
+const openConfirmRead = (n) => {
+  pendingNotif.value = n;
+};
+
+const doMarkRead = async () => {
+  if (!pendingNotif.value) return;
+  await notifStore.markRead(pendingNotif.value.id);
+  pendingNotif.value = null;
+};
+
+/* =========================
+   VACACIONES
+========================= */
+const showVacationModal = ref(false);
+const vacationStart = ref('');
+const vacationEnd = ref('');
+const vacationSubmitting = ref(false);
+const activeVacation = ref(null);
+
+const minVacationStart = computed(() => {
+  // restricción de 14 días desactivada para pruebas
+  return new Date().toLocaleDateString('en-CA');
+});
+
+const vacationDuration = computed(() => {
+  if (!vacationStart.value || !vacationEnd.value) return 0;
+  const s = new Date(vacationStart.value + 'T00:00:00');
+  const e = new Date(vacationEnd.value   + 'T00:00:00');
+  return Math.floor((e - s) / 86400000) + 1;
+});
+
+const loadMyVacation = async () => {
+  if (!currentHouse.value) return;
+  try {
+    const res = await api.get(`/houses/${currentHouse.value.id}/vacations/mine`);
+    activeVacation.value = res.data.vacation;
+  } catch { activeVacation.value = null; }
+};
+
+const submitVacation = async () => {
+  vacationSubmitting.value = true;
+  try {
+    const res = await api.post(`/houses/${currentHouse.value.id}/vacations`, {
+      fechaInicio: vacationStart.value,
+      fechaFin: vacationEnd.value
+    });
+    showVacationModal.value = false;
+    vacationStart.value = '';
+    vacationEnd.value = '';
+    await loadMyVacation();
+    await loadMyExecutions();
+    const n = res.data.executionsReassigned;
+    alert(`Vacaciones registradas. ${n > 0 ? `${n} tarea(s) del mes actual reasignadas a tus compañeros.` : 'Las tareas de meses futuros se repartirán automáticamente al inicio de cada mes.'} `);
+  } catch (err) {
+    alert(err.response?.data?.message || 'Error al declarar vacaciones');
+  } finally {
+    vacationSubmitting.value = false;
+  }
+};
+
+const handleCancelVacation = async () => {
+  if (!activeVacation.value) return;
+  if (!confirm('¿Seguro que quieres cancelar tus vacaciones? Tus tareas pendientes te serán devueltas.')) return;
+  try {
+    await api.delete(`/houses/${currentHouse.value.id}/vacations/${activeVacation.value.id}`);
+    activeVacation.value = null;
+    await loadMyExecutions();
+  } catch (err) {
+    alert(err.response?.data?.message || 'Error al cancelar vacaciones');
+  }
+};
+
+/* =========================
+   INTERCAMBIOS
+========================= */
+const showSwapModal = ref(false);
+const swapSourceExec = ref(null);
+const eligibleExecutions = ref([]);
+const selectedSwapExec = ref(null);
+const swapLoadingEligible = ref(false);
+const swapSubmitting = ref(false);
+
+const daysUntil = (fecha) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const d = new Date(fecha + 'T00:00:00');
+  return Math.floor((d - today) / 86400000);
+};
+
+const formatShortDate = (fecha) =>
+  new Date(fecha + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+
+const openSwapModal = async (exec) => {
+  swapSourceExec.value = exec;
+  selectedSwapExec.value = null;
+  eligibleExecutions.value = [];
+  showSwapModal.value = true;
+  swapLoadingEligible.value = true;
+  try {
+    const res = await api.get(`/houses/${currentHouse.value.id}/swaps/eligible/${exec.id}`);
+    eligibleExecutions.value = res.data.executions;
+  } catch (err) {
+    console.error(err);
+  } finally {
+    swapLoadingEligible.value = false;
+  }
+};
+
+const closeSwapModal = () => {
+  showSwapModal.value = false;
+  swapSourceExec.value = null;
+  selectedSwapExec.value = null;
+  eligibleExecutions.value = [];
+};
+
+const submitSwap = async () => {
+  if (!selectedSwapExec.value || !swapSourceExec.value) return;
+  swapSubmitting.value = true;
+  try {
+    await api.post(`/houses/${currentHouse.value.id}/swaps`, {
+      execSolId: swapSourceExec.value.id,
+      execDestId: selectedSwapExec.value.id
+    });
+    closeSwapModal();
+    alert('Propuesta de intercambio enviada ✅');
+  } catch (err) {
+    alert(err.response?.data?.message || 'Error al proponer el intercambio');
+  } finally {
+    swapSubmitting.value = false;
+  }
+};
+
+const handleAcceptSwap = async (n) => {
+  try {
+    await api.put(`/swaps/${n.intercambio_id}/accept`);
+    await notifStore.markRead(n.id);
+    await notifStore.load(currentHouse.value.id);
+    await loadMyExecutions();
+  } catch (err) {
+    alert(err.response?.data?.message || 'Error al aceptar el intercambio');
+  }
+};
+
+const handleRejectSwap = async (n) => {
+  try {
+    await api.put(`/swaps/${n.intercambio_id}/reject`);
+    await notifStore.markRead(n.id);
+    await notifStore.load(currentHouse.value.id);
+  } catch (err) {
+    alert(err.response?.data?.message || 'Error al rechazar el intercambio');
+  }
+};
+
+const notifIcon = (tipo) => {
+  if (tipo === 'castigo') return '⚠️';
+  if (tipo === 'intercambio_propuesta') return '🔄';
+  if (tipo === 'intercambio_aceptado') return '✅';
+  if (tipo === 'intercambio_rechazado') return '❌';
+  return '🔔';
+};
+
 const copiedHouseId = ref(null);
 const showToast = ref(false);
 const showCreateModal = ref(false);
@@ -198,6 +611,30 @@ const selectedFile = ref(null);
 const loading = ref(false);
 const fileInputs = ref({});
 const myExecutions = ref([]);
+const houseStats = ref([]);
+
+const myStats = computed(() =>
+  houseStats.value.find(m => m.userId === auth.user?.user_id) ?? null
+);
+
+const cumplimiento = (m) => {
+  const total = m.completadas + m.fallos;
+  return total === 0 ? null : Math.round((m.completadas / total) * 100);
+};
+
+const mesActual = computed(() =>
+  new Date().toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })
+);
+
+const loadStats = async () => {
+  if (!currentHouse.value) return;
+  try {
+    const res = await api.get(`/houses/${currentHouse.value.id}/stats`);
+    houseStats.value = res.data.stats;
+  } catch (err) {
+    console.error('Error cargando estadísticas', err);
+  }
+};
 
 const openValidationModal = (execution) => {
   selectedExecution.value = execution
@@ -216,6 +653,7 @@ const setFileInputRef = (id) => (el) => {
 }
 
 const loadMyExecutions = async () => {
+  if (!currentHouse.value) return;
   const res = await api.get(`/houses/${currentHouse.value.id}/executions/my-tasks`)
   myExecutions.value = res.data.executions
 }
@@ -303,8 +741,14 @@ const openCreateHouse = () => {
     showCreateModal.value = true;
 }
 
-const changeTab = (tab) => {
+const changeTab = async (tab) => {
   activeTab.value = tab;
+  if (tab === 'notificaciones' && currentHouse.value) {
+    await notifStore.load(currentHouse.value.id);
+  }
+  if (tab === 'calendario' && currentHouse.value) {
+    await loadStats();
+  }
 };
 
 const handleHouseCreated = async () => {
@@ -385,7 +829,8 @@ async function loadHouses() {
     const res = await api.get("/houses");
     houses.value = res.data.houses.map(h => ({
       id: h.id,
-      name: h.nombre
+      name: h.nombre,
+      modo: h.modo
     }));
 
     if (houses.value.length > 0) {
@@ -417,19 +862,14 @@ async function loadTasks() {
   }
 }
 
-const handleTaskCreated = async () => {
-  await Promise.all([
-    loadTasks(),
-    loadCalendar()
-  ])
+const refreshCurrentHouse = () => {
+  if (currentHouse.value) {
+    currentHouse.value = { ...toRaw(currentHouse.value) }
+  }
 }
 
-const handleTaskDeleted = async () => {
-  await Promise.all([
-    loadTasks(),
-    loadCalendar()
-  ])
-}
+const handleTaskCreated = () => refreshCurrentHouse()
+const handleTaskDeleted = () => refreshCurrentHouse()
 
 /* =========================
    LOAD CALENDAR
@@ -458,6 +898,7 @@ async function loadCalendar()
           taskName: e.taskName,
           userName: e.usuario,
           status: e.estado,
+          tipo: e.tipo,
         })),
       };
     });
@@ -471,21 +912,9 @@ const showEditModal = ref(false)
 const selectedHouse = ref(null)
 
 
-const openEditHouse = async (house) => {
-  try {
-      const res = await api.get(`/houses/${house.id}/details`)
-
-      selectedHouse.value = {
-        ...res.data,
-        tasks: res.data.tasks.map(t => ({
-          text: t.nombre,
-        }))
-      }
-
-      showEditModal.value = true
-  } catch (error) {
-    console.error(error) 
-  }
+const openEditHouse = (house) => {
+  selectedHouse.value = house
+  showEditModal.value = true
 }
 
 
@@ -493,17 +922,22 @@ const openEditHouse = async (house) => {
    WATCH CURRENT HOUSE
 ========================= */
 
-watch(currentHouse, async (newHouse) => {
+watch(currentHouse, async (newHouse, oldHouse) => {
   if (!newHouse) return;
-    if(!auth.isReady)
-      auth.init();
+  if (!auth.isReady)
+    await auth.init();
 
-  tasks.value = [];
-  calendar.value = [];
+  if (!oldHouse || oldHouse.id !== newHouse.id) {
+    tasks.value = [];
+    calendar.value = [];
+  }
 
   await loadTasks();
   await loadCalendar();
-  //await store.refreshHouseData();
+  await loadMyExecutions().catch(() => {});
+  await loadMyVacation();
+  await notifStore.load(newHouse.id);
+  if (activeTab.value === 'calendario') await loadStats();
 });
 
 /* =========================
@@ -511,15 +945,33 @@ watch(currentHouse, async (newHouse) => {
 ========================= */
 
 onMounted(async () => {
-  if(!auth.isReady)
-      auth.init();
+  if (!auth.isReady)
+    await auth.init();
 
   await loadHouses();
-  const res = await api.get(`/houses/${currentHouse.value.id}/executions/my-tasks`)
-  myExecutions.value = res.data.executions
   if (houses.value.length > 0) {
-    currentHouse.value = houses.value[0]; //dispara el watch
+    currentHouse.value = houses.value[0];
   }
+
+  // notificaciones in-app + SSE
+  if (currentHouse.value) await notifStore.load(currentHouse.value.id);
+  notifStore.startSSE();
+
+  // service worker + banner push + escuchar mensajes del SW
+  if ('serviceWorker' in navigator) {
+    await navigator.serviceWorker.register('/sw.js');
+    navigator.serviceWorker.addEventListener('message', (event) => {
+      if (event.data?.type === 'NEW_NOTIFICATION' && currentHouse.value) {
+        notifStore.load(currentHouse.value.id);
+      }
+    });
+  }
+  const alreadySubscribed = await notifStore.isPushSubscribed();
+  showPushBanner.value = notifStore.pushSupported && !alreadySubscribed && Notification.permission !== 'denied';
+});
+
+onUnmounted(() => {
+  notifStore.stopSSE();
 });
 </script>
 
@@ -730,6 +1182,12 @@ onMounted(async () => {
   border-radius: 6px;
 }
 
+.execution.castigo {
+  background: #fee2e2;
+  border-left: 3px solid #ef4444;
+  color: #991b1b;
+}
+
 .day-number {
   font-weight: bold;
   margin-bottom: 5px;
@@ -832,16 +1290,17 @@ onMounted(async () => {
 }
 
 .btn-validate {
-  background: #4caf50;
+  background: #7ff2ec;
   border: none;
-  color: white;
+  color: #1d3557;
   padding: 6px 12px;
   border-radius: 6px;
   cursor: pointer;
+  font-weight: 600;
 }
 
 .btn-validate:hover {
-  background: #43a047;
+  background: #5ececa;
 }
 
 .task-status {
@@ -854,5 +1313,554 @@ onMounted(async () => {
 
 .task-status.fail {
   color: #ef4444;
+}
+
+/* =========================
+   NOTIFICACIONES
+========================= */
+.notif-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.notif-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-push {
+  background: #7ff2ec;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background 0.2s;
+}
+
+.btn-push:hover { background: #5ececa; }
+
+.btn-read-all {
+  background: #7ff2ec;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  color: #1d3557;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.btn-read-all:hover { background: #5ececa; }
+
+.notif-empty {
+  color: #999;
+  text-align: center;
+  padding: 30px 0;
+  font-size: 14px;
+}
+
+.notif-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.notif-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: #f4f6f8;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.notif-item:hover { background: #e9eef2; }
+
+.notif-item.notif-castigo { background: #fee2e2; border-left: 3px solid #ef4444; }
+.notif-item.notif-castigo:hover { background: #fecaca; }
+
+.notif-icon { font-size: 18px; flex-shrink: 0; }
+
+.notif-body { flex: 1; }
+
+.notif-msg { margin: 0; font-size: 14px; color: #1e293b; font-weight: 500; }
+
+.notif-date { font-size: 12px; color: #94a3b8; }
+
+.notif-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #3c6e71;
+  flex-shrink: 0;
+}
+
+/* =========================
+   VACACIONES
+========================= */
+.tareas-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.tareas-header h2 { margin: 0; }
+
+.btn-declare-vacation {
+  background: #4A6775;
+  border: none;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-declare-vacation:hover { background: #3c5562; }
+
+.vacation-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #e0f2fe;
+  border-left: 4px solid #0ea5e9;
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.vacation-banner-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.vacation-icon { font-size: 22px; }
+
+.vacation-title {
+  margin: 0;
+  font-weight: 600;
+  font-size: 14px;
+  color: #0369a1;
+}
+
+.vacation-dates {
+  margin: 0;
+  font-size: 13px;
+  color: #0284c7;
+}
+
+.btn-cancel-vacation {
+  background: #e57373;
+  border: none;
+  color: white;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-cancel-vacation:hover { background: #d9534f; }
+
+.vacation-modal {
+  background: white;
+  border-radius: 14px;
+  padding: 24px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  width: 90%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.vacation-modal h3 { margin: 0; font-size: 18px; color: #1e293b; }
+
+.vacation-modal-info {
+  margin: 0;
+  font-size: 13px;
+  color: #475569;
+  background: #f4f6f8;
+  padding: 10px 12px;
+  border-radius: 8px;
+  line-height: 1.6;
+}
+
+.vacation-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.vacation-form label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.vacation-date-input {
+  padding: 8px 10px;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  font-size: 14px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.vacation-error {
+  margin: 0;
+  font-size: 13px;
+  color: #e57373;
+  font-weight: 500;
+}
+
+.notif-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.notif-confirm-modal {
+  background: white;
+  border-radius: 14px;
+  padding: 24px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+  max-width: 420px;
+  width: 90%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.notif-confirm-msg {
+  font-size: 14px;
+  color: #1e293b;
+  background: #f4f6f8;
+  padding: 12px 14px;
+  border-radius: 8px;
+  margin: 0;
+}
+
+.notif-confirm-question {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.btn-cancel {
+  background: #f4f6f8;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #64748b;
+  transition: background 0.2s;
+}
+
+.btn-cancel:hover { background: #e9eef2; }
+
+.btn-confirm {
+  background: #7ff2ec;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1d3557;
+  transition: background 0.2s;
+}
+
+.btn-confirm:hover { background: #5ececa; }
+
+/* =========================
+   BOTÓN INTERCAMBIO (lista tareas)
+========================= */
+.task-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-end;
+}
+
+.btn-swap {
+  background: #4A6775;
+  border: none;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+
+.btn-swap:hover { background: #3c5562; }
+
+/* =========================
+   MODAL INTERCAMBIO
+========================= */
+.swap-modal {
+  background: white;
+  border-radius: 14px;
+  padding: 24px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  width: 90%;
+  max-width: 480px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.swap-modal h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #1e293b;
+}
+
+.swap-modal-sub {
+  margin: 0;
+  font-size: 14px;
+  color: #475569;
+  background: #f4f6f8;
+  padding: 10px 12px;
+  border-radius: 8px;
+}
+
+.swap-modal-label {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.swap-loading, .swap-empty {
+  font-size: 13px;
+  color: #94a3b8;
+  text-align: center;
+  padding: 16px 0;
+}
+
+.swap-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.swap-option {
+  display: flex;
+  flex-direction: column;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #f4f6f8;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.15s;
+}
+
+.swap-option:hover { background: #e9eef2; }
+
+.swap-option.selected {
+  border-color: #7ff2ec;
+  background: #f0fdfb;
+}
+
+.swap-task-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: #1e293b;
+}
+
+.swap-task-meta {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+/* =========================
+   NOTIFICACIONES INTERCAMBIO
+========================= */
+.swap-notif-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.btn-swap-accept {
+  background: #7ff2ec;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #1d3557;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-swap-accept:hover { background: #5ececa; }
+
+.btn-swap-reject {
+  background: #e57373;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-swap-reject:hover { background: #d9534f; }
+
+.notif-swap {
+  cursor: default;
+}
+
+/* ========================= ESTADÍSTICAS ========================= */
+.stats-view {
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.stats-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1d3557;
+  margin-bottom: 20px;
+  text-transform: capitalize;
+}
+
+.stats-subtitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #4A6775;
+  margin: 28px 0 12px;
+}
+
+.stats-summary {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.stat-card {
+  flex: 1 1 120px;
+  background: #f5f7fb;
+  border-radius: 12px;
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.stat-card--highlight {
+  background: #e8f4f3;
+  border-color: #7edbd4;
+}
+
+.stat-card--warn {
+  background: #fef3f2;
+  border-color: #f8c1bb;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1d3557;
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: #64748b;
+  text-align: center;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.stats-table-wrap {
+  overflow-x: auto;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  min-width: 0;
+  width: 100%;
+}
+
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.stats-table thead tr {
+  background: #4A6775;
+  color: #fff;
+}
+
+.stats-table th {
+  padding: 11px 14px;
+  text-align: left;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.stats-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #f0f2f5;
+  color: #334155;
+}
+
+.stats-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.stats-table tbody tr:hover td {
+  background: #f8fafc;
+}
+
+.stats-row--me td {
+  background: #e8f4f3 !important;
+  font-weight: 600;
+}
+
+.stats-na {
+  color: #94a3b8;
 }
 </style>

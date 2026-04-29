@@ -13,5 +13,12 @@ export const env = {
   dbPassword: process.env.DB_PASSWORD,
   jwtSecret: process.env.JWT_SECRET,
   jwtRefreshToken: process.env.JWT_REFRESH_TOKEN,
-  saltRounds: process.env.SALT_ROUNDS
+  saltRounds: process.env.SALT_ROUNDS,
+  emailUser: process.env.EMAIL_USER,
+  emailPass: process.env.EMAIL_PASS,
+  vapidPublic: process.env.VAPID_PUBLIC,
+  vapidPrivate: process.env.VAPID_PRIVATE,
+  vapidEmail: process.env.VAPID_EMAIL,
+  googleClientId: process.env.GOOGLE_CLIENT_ID,
+  appleClientId: process.env.APPLE_CLIENT_ID,
 };

@@ -1,4 +1,4 @@
-import { createTaskService, getTasksByHouseIdService, replanthMonthService, getMonthCalendarService, completeExecutionService, deleteTaskService, updateTaskService, validateExecutionService, getMyExecutionsService } from "./task.service.js";
+import { createTaskService, getTasksByHouseIdService, replanthMonthService, getMonthCalendarService, completeExecutionService, deleteTaskService, updateTaskService, validateExecutionService, getMyExecutionsService, getHouseStatsService } from "./task.service.js";
 
 export async function createtaskController(req, res, next)
 {
@@ -132,5 +132,14 @@ export async function getMyExecutionsController(req, res, next)
 
   } catch (error) {
     next(error)
+  }
+}
+
+export async function getHouseStatsController(req, res, next) {
+  try {
+    const stats = await getHouseStatsService(req.houseId);
+    return res.status(200).json({ stats });
+  } catch (error) {
+    next(error);
   }
 }
